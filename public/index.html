@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pokémon League — Dashboard</title>
+    <meta name="description" content="Dashboard público de todos los entrenadores de la Pokémon League" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>" />
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading">
+        <div class="pokeball-spinner"></div>
+        <p>Cargando entrenadores...</p>
+    </div>
+
+    <header>
+        <h1>🏆 Pokémon League</h1>
+        <p>Dashboard de entrenadores — Pokémon X</p>
+    </header>
+
+    <div class="container">
+        <!-- Trainers List -->
+        <section class="trainers-section" id="trainers-section">
+            <div class="section-title">
+                <span class="icon">👥</span>
+                <span>Entrenadores</span>
+                <span class="count" id="trainer-count">0</span>
+            </div>
+            <div class="trainers-grid" id="trainers-grid"></div>
+        </section>
+
+        <!-- Trainer Detail View (hidden initially) -->
+        <section class="detail-section" id="detail-section" style="display:none">
+            <button class="back-btn" id="back-btn" onclick="showTrainerList()">← Volver</button>
+            <div id="trainer-detail"></div>
+        </section>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content" id="modal-content"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
