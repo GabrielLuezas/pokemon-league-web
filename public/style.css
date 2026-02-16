@@ -573,6 +573,244 @@ header p {
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+/* ================== DETAIL TABS ================== */
+.detail-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    background: rgba(20, 20, 40, 0.6);
+    border-radius: var(--radius-sm);
+    padding: 4px;
+    border: 1px solid var(--border-color);
+}
+.detail-tab {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.25s ease;
+}
+.detail-tab:hover {
+    color: var(--text-secondary);
+    background: rgba(100, 100, 180, 0.08);
+}
+.detail-tab.active {
+    background: rgba(103, 126, 234, 0.2);
+    color: #667eea;
+    box-shadow: 0 2px 8px rgba(103, 126, 234, 0.15);
+}
+
+/* ================== ACTUAL TAB — TRAINER CARD ================== */
+.actual-trainer-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 28px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+}
+.actual-trainer-avatar {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    box-shadow: 0 4px 16px rgba(103, 126, 234, 0.3);
+}
+.actual-trainer-info { flex: 1; }
+.actual-trainer-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+.actual-trainer-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+.actual-trainer-money {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--accent-green);
+}
+
+/* ================== ACTUAL TAB — BADGES ================== */
+.actual-badges-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 28px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+}
+.badges-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 12px;
+}
+.badge-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(20, 20, 40, 0.5);
+    border: 1px solid rgba(100, 100, 180, 0.1);
+    transition: all 0.3s ease;
+}
+.badge-item.earned {
+    background: rgba(255, 211, 42, 0.08);
+    border-color: rgba(255, 211, 42, 0.25);
+    box-shadow: 0 0 16px rgba(255, 211, 42, 0.1);
+}
+.badge-icon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    filter: grayscale(1) brightness(0.4) opacity(0.5);
+    transition: all 0.3s ease;
+}
+.badge-item.earned .badge-icon {
+    filter: drop-shadow(0 0 6px rgba(255, 211, 42, 0.5));
+    transform: scale(1.1);
+}
+.badge-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+.badge-item.earned .badge-label {
+    color: var(--accent-gold);
+}
+
+/* ================== ACTUAL TAB — COMPACT PARTY ================== */
+.actual-party-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 28px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+}
+.actual-party-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+.actual-party-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(20, 20, 40, 0.5);
+    border: 1px solid rgba(100, 100, 180, 0.1);
+    border-radius: var(--radius-sm);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.actual-party-card:hover {
+    background: rgba(40, 40, 65, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.actual-party-card.shiny {
+    border-color: rgba(255, 211, 42, 0.2);
+}
+.actual-party-card.dead {
+    opacity: 0.5;
+}
+.actual-party-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.actual-party-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.actual-party-level {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ================== ACTUAL TAB — DEATHS ================== */
+.actual-deaths-section {
+    background: rgba(30, 15, 20, 0.85);
+    border: 1px solid rgba(255, 71, 87, 0.2);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 28px;
+    backdrop-filter: blur(12px);
+}
+.actual-deaths-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+}
+.actual-death-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px;
+    background: rgba(40, 20, 30, 0.6);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 71, 87, 0.1);
+}
+.actual-death-card img {
+    filter: grayscale(100%) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+.actual-death-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.actual-death-name {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+}
+.actual-death-level {
+    font-size: 0.75rem;
+    color: var(--accent-red);
+    font-weight: 500;
+}
+.actual-death-date {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
 /* ================== RESPONSIVE ================== */
 @media (max-width: 768px) {
     header h1 { font-size: 1.8rem; }
@@ -580,6 +818,12 @@ header p {
     .party-grid { grid-template-columns: 1fr; }
     .box-grid { grid-template-columns: repeat(3, 1fr); }
     .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .badges-grid { grid-template-columns: repeat(4, 1fr); }
+    .actual-party-grid { grid-template-columns: 1fr; }
+    .actual-deaths-grid { grid-template-columns: 1fr; }
+    .detail-tabs { flex-direction: row; }
+    .actual-trainer-card { flex-direction: column; text-align: center; }
+    .actual-trainer-meta { justify-content: center; }
 }
 
 /* ================== LIVE DOT ================== */

@@ -19,8 +19,14 @@ async function initDB() {
                 party JSONB DEFAULT '[]',
                 boxes JSONB DEFAULT '[]',
                 nuzlocke JSONB DEFAULT '{"deaths":[],"enabled":true}',
+                trainer JSONB DEFAULT '{}',
                 updated_at TIMESTAMP DEFAULT NOW()
             );
+        `);
+
+        // Add trainer column if table already exists without it
+        await client.query(`
+            ALTER TABLE save_data ADD COLUMN IF NOT EXISTS trainer JSONB DEFAULT '{}';
         `);
 
         console.log('✅ Database tables initialized');

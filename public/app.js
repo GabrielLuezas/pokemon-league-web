@@ -141,6 +141,21 @@ function showTrainerList() {
     loadTrainers();
 }
 
+// ===================== KALOS BADGES =====================
+
+const KALOS_BADGES = [
+    { name: 'Escarabajo', img: '/badges/Medalla1.png' },
+    { name: 'Muro',       img: '/badges/Medalla2.png' },
+    { name: 'Combate',    img: '/badges/Medalla3.png' },
+    { name: 'Planta',     img: '/badges/Medalla4.png' },
+    { name: 'Voltaje',    img: '/badges/Medalla5.png' },
+    { name: 'Hada',       img: '/badges/Medalla6.png' },
+    { name: 'Psíquico',   img: '/badges/Medalla7.png' },
+    { name: 'Iceberg',    img: '/badges/Medalla8.png' },
+];
+
+let activeDetailTab = 'actual';
+
 function renderTrainerDetail(user) {
     const detail = document.getElementById('trainer-detail');
     const party = user.party || [];
@@ -163,42 +178,158 @@ function renderTrainerDetail(user) {
             </div>
         </div>
 
-        <!-- Party -->
-        <section class="party-section">
-            <div class="section-title">
-                <span class="icon">⚔️</span>
-                <span>Equipo Actual</span>
-                <span class="count">${party.length}/6</span>
-            </div>
-            <div class="party-grid" id="detail-party-grid"></div>
-        </section>
+        <!-- Tabs -->
+        <div class="detail-tabs">
+            <button class="detail-tab${activeDetailTab === 'actual' ? ' active' : ''}" data-tab="actual" onclick="switchDetailTab('actual')">🎖️ Actual</button>
+            <button class="detail-tab${activeDetailTab === 'pokemon' ? ' active' : ''}" data-tab="pokemon" onclick="switchDetailTab('pokemon')">⚔️ Pokémon</button>
+        </div>
 
-        <!-- Boxes -->
-        <section class="box-section">
-            <div class="section-title">
-                <span class="icon">📦</span>
-                <span>Cajas del PC</span>
-                <span class="count" id="detail-box-total">0 Pokémon</span>
-            </div>
-            <div class="box-tabs" id="detail-box-tabs"></div>
-            <div class="box-grid" id="detail-box-grid"></div>
-        </section>
+        <!-- Tab: Actual -->
+        <div class="tab-content" id="tab-actual" style="${activeDetailTab === 'actual' ? '' : 'display:none'}">
+            <div id="actual-content"></div>
+        </div>
 
-        <!-- Graveyard -->
-        <section class="graveyard-section" id="detail-graveyard" style="display:none">
-            <div class="section-title">
-                <span class="icon">💀</span>
-                <span>Cementerio</span>
-                <span class="count" id="detail-graveyard-count">0</span>
-            </div>
-            <div class="graveyard-grid" id="detail-graveyard-grid"></div>
-        </section>
+        <!-- Tab: Pokémon -->
+        <div class="tab-content" id="tab-pokemon" style="${activeDetailTab === 'pokemon' ? '' : 'display:none'}">
+            <section class="party-section">
+                <div class="section-title">
+                    <span class="icon">⚔️</span>
+                    <span>Equipo Actual</span>
+                    <span class="count">${party.length}/6</span>
+                </div>
+                <div class="party-grid" id="detail-party-grid"></div>
+            </section>
+            <section class="box-section">
+                <div class="section-title">
+                    <span class="icon">📦</span>
+                    <span>Cajas del PC</span>
+                    <span class="count" id="detail-box-total">0 Pokémon</span>
+                </div>
+                <div class="box-tabs" id="detail-box-tabs"></div>
+                <div class="box-grid" id="detail-box-grid"></div>
+            </section>
+            <section class="graveyard-section" id="detail-graveyard" style="display:none">
+                <div class="section-title">
+                    <span class="icon">💀</span>
+                    <span>Cementerio</span>
+                    <span class="count" id="detail-graveyard-count">0</span>
+                </div>
+                <div class="graveyard-grid" id="detail-graveyard-grid"></div>
+            </section>
+        </div>
     `;
 
+    renderActualContent(user);
     renderDetailParty(party);
     renderDetailBoxTabs(boxes);
     renderDetailBox(0, boxes);
     renderDetailGraveyard(nuzlocke);
+}
+
+function switchDetailTab(tab) {
+    activeDetailTab = tab;
+    document.querySelectorAll('.detail-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+    document.getElementById('tab-actual').style.display = tab === 'actual' ? 'block' : 'none';
+    document.getElementById('tab-pokemon').style.display = tab === 'pokemon' ? 'block' : 'none';
+}
+
+function renderActualContent(user) {
+    const container = document.getElementById('actual-content');
+    if (!container) return;
+
+    const trainer = user.trainer || {};
+    const party = user.party || [];
+    const nuzlocke = user.nuzlocke || { deaths: [] };
+    const deaths = nuzlocke.deaths || [];
+    const badges = trainer.badges || [];
+
+    const trainerName = trainer.name || user.username;
+    const initial = trainerName.charAt(0).toUpperCase();
+    const tid = trainer.tid || '---';
+    const hours = String(trainer.hours || 0).padStart(2, '0');
+    const minutes = String(trainer.minutes || 0).padStart(2, '0');
+    const seconds = String(trainer.seconds || 0).padStart(2, '0');
+    const money = (trainer.money || 0).toLocaleString();
+    const badgeCount = trainer.badgeCount || badges.filter(Boolean).length;
+
+    const badgesHTML = KALOS_BADGES.map((badge, i) => {
+        const earned = badges[i] || false;
+        return `<div class="badge-item${earned ? ' earned' : ''}">
+            <img class="badge-icon" src="${badge.img}" alt="${badge.name}" />
+            <span class="badge-label">${badge.name}</span>
+        </div>`;
+    }).join('');
+
+    const partyHTML = party.map(poke => {
+        if (!poke) return '';
+        const spriteUrl = getSpriteUrl(poke.speciesId, poke.isShiny);
+        return `<div class="actual-party-card${poke.isShiny ? ' shiny' : ''}${poke.isDead ? ' dead' : ''}">
+            <img src="${spriteUrl}" alt="${escapeHtml(poke.species)}" width="56" height="56" style="image-rendering:pixelated" onerror="this.src='${SPRITE_BASE}0.png'" />
+            <div class="actual-party-info">
+                <span class="actual-party-name">${escapeHtml(poke.nickname || poke.species)}</span>
+                <span class="actual-party-level">Lv. ${poke.level}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    const deathsHTML = deaths.map(d => {
+        const spriteUrl = getSpriteUrl(d.speciesId, d.isShiny);
+        const date = new Date(d.diedAt);
+        const timeStr = date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `<div class="actual-death-card">
+            <img src="${spriteUrl}" alt="${escapeHtml(d.species)}" width="48" height="48" style="image-rendering:pixelated" onerror="this.src='${SPRITE_BASE}0.png'" />
+            <div class="actual-death-info">
+                <span class="actual-death-name">${escapeHtml(d.nickname || d.species)}</span>
+                <span class="actual-death-level">Lv. ${d.level}</span>
+                <span class="actual-death-date">🕊️ ${timeStr}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    container.innerHTML = `
+        <div class="actual-trainer-card">
+            <div class="actual-trainer-avatar">${initial}</div>
+            <div class="actual-trainer-info">
+                <div class="actual-trainer-name">${escapeHtml(trainerName)}</div>
+                <div class="actual-trainer-meta">
+                    <span>TID: ${tid}</span>
+                    <span>🕐 ${hours}:${minutes}:${seconds}</span>
+                </div>
+                <div class="actual-trainer-money">💰 $${money}</div>
+            </div>
+        </div>
+
+        <section class="actual-badges-section">
+            <div class="section-title">
+                <span class="icon">🏅</span>
+                <span>Medallas de Kalos</span>
+                <span class="count">${badgeCount}/8</span>
+            </div>
+            <div class="badges-grid">${badgesHTML}</div>
+        </section>
+
+        <section class="actual-party-section">
+            <div class="section-title">
+                <span class="icon">⚔️</span>
+                <span>Equipo</span>
+                <span class="count">${party.length}/6</span>
+            </div>
+            <div class="actual-party-grid">${partyHTML || '<div class="no-data-msg"><span class="icon">🎒</span><p>Sin Pokémon en el equipo</p></div>'}</div>
+        </section>
+
+        ${deaths.length > 0 ? `
+        <section class="actual-deaths-section">
+            <div class="section-title">
+                <span class="icon">💀</span>
+                <span>Cementerio</span>
+                <span class="count">${deaths.length}</span>
+            </div>
+            <div class="actual-deaths-grid">${deathsHTML}</div>
+        </section>
+        ` : ''}
+    `;
 }
 
 // ===================== RENDER PARTY =====================
