@@ -35,6 +35,7 @@ async function loadTrainers() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         allUsers = await res.json();
         renderTrainers();
+        renderRankings();
         document.getElementById('loading').classList.add('hidden');
     } catch (err) {
         console.error('Error loading trainers:', err);
@@ -254,6 +255,14 @@ function renderActualContent(user) {
     const money = (trainer.money || 0).toLocaleString();
     const badgeCount = trainer.badgeCount || badges.filter(Boolean).length;
 
+    // Points & challenges calculation
+    const stats = getTrainerStats(user);
+    const earnedFromBadges = (stats.badges * 100);
+    let speciesMilestones = 0;
+    [10, 25, 50, 100].forEach(t => { if (stats.uniqueSpecies >= t) speciesMilestones++; });
+    const earnedFromSpecies = speciesMilestones * 100;
+    const deathPenalty = stats.deaths * 50;
+
     const badgesHTML = KALOS_BADGES.map((badge, i) => {
         const earned = badges[i] || false;
         return `<div class="badge-item${earned ? ' earned' : ''}">
@@ -300,6 +309,20 @@ function renderActualContent(user) {
                 <div class="actual-trainer-money">💰 $${money}</div>
             </div>
         </div>
+
+        <section class="detail-points-panel">
+            <div class="detail-points-header">
+                <span>🏆</span>
+                <span>Puntos Nuzlocke</span>
+            </div>
+            <div class="detail-points-total">${stats.points}</div>
+            <div class="detail-points-breakdown">
+                <div class="detail-points-item earned">🏅 Medallas: +${earnedFromBadges}</div>
+                <div class="detail-points-item earned">📖 Especies (${stats.uniqueSpecies}): +${earnedFromSpecies}</div>
+                <div class="detail-points-item penalty">💀 Muertes (${stats.deaths}): -${deathPenalty}</div>
+            </div>
+            ${stats.shinys > 0 ? `<div class="detail-points-shiny">✨ Shinys encontrados: ${stats.shinys}</div>` : ''}
+        </section>
 
         <section class="actual-badges-section">
             <div class="section-title">
@@ -607,4 +630,110 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ===================== LEAGUE TABS =====================
+
+function switchLeagueTab(tabName) {
+    document.querySelectorAll('.league-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+    });
+    document.querySelectorAll('.league-tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tabName}`);
+    });
+}
+
+// ===================== RANKINGS =====================
+
+function getTrainerStats(user) {
+    const party = user.party || [];
+    const boxes = user.boxes || [];
+    const nuzlocke = user.nuzlocke || { deaths: [] };
+    const deaths = nuzlocke.deaths ? nuzlocke.deaths.length : 0;
+    const trainer = user.trainer || {};
+    const badges = trainer.badgeCount || 0;
+
+    // Count unique species
+    const speciesSet = new Set();
+    party.forEach(p => { if (p && p.speciesId) speciesSet.add(p.speciesId); });
+    boxes.forEach(b => (b.slots || []).forEach(p => { if (p && p.speciesId) speciesSet.add(p.speciesId); }));
+    const uniqueSpecies = speciesSet.size;
+
+    // Count shinys
+    let shinys = 0;
+    const shinyList = [];
+    party.forEach(p => { if (p && p.isShiny) { shinys++; shinyList.push(p); } });
+    boxes.forEach(b => (b.slots || []).forEach(p => { if (p && p.isShiny) { shinys++; shinyList.push(p); } }));
+
+    // Points: badges * 100 + unique species milestone bonuses - deaths * 50
+    let points = badges * 100;
+    [10, 25, 50, 100].forEach(t => { if (uniqueSpecies >= t) points += 100; });
+    points -= deaths * 50;
+
+    return { deaths, badges, uniqueSpecies, shinys, shinyList, points, deathList: nuzlocke.deaths || [] };
+}
+
+function renderRankings() {
+    if (!allUsers || allUsers.length === 0) return;
+
+    const stats = allUsers.map(user => ({
+        user,
+        ...getTrainerStats(user),
+    }));
+
+    // --- MÁS PUNTOS ---
+    const byPoints = [...stats].sort((a, b) => b.points - a.points);
+    const pointsEl = document.getElementById('ranking-points');
+    pointsEl.innerHTML = '';
+    byPoints.forEach((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+        pointsEl.innerHTML += `
+            <div class="ranking-row ${i === 0 ? 'gold' : ''}">
+                <span class="rank-pos">${medal}</span>
+                <span class="rank-name">${escapeHtml(s.user.username)}</span>
+                <span class="rank-detail">
+                    <span class="rank-value">${s.points} pts</span>
+                    <span class="rank-sub">🏅${s.badges} | 📖${s.uniqueSpecies} | 💀${s.deaths}</span>
+                </span>
+            </div>
+        `;
+    });
+
+    // --- MÁS MUERTOS ---
+    const byDeaths = [...stats].sort((a, b) => b.deaths - a.deaths);
+    const deathsEl = document.getElementById('ranking-deaths');
+    deathsEl.innerHTML = '';
+    byDeaths.forEach((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+        const deathSprites = s.deathList.map(d =>
+            `<img src="${getSpriteUrl(d.speciesId, d.isShiny)}" alt="${escapeHtml(d.species)}" title="${escapeHtml(d.nickname || d.species)} Lv.${d.level}" width="36" height="36" onerror="this.src='${SPRITE_BASE}0.png'">`
+        ).join('');
+        deathsEl.innerHTML += `
+            <div class="ranking-row ${i === 0 ? 'gold' : ''}">
+                <span class="rank-pos">${medal}</span>
+                <span class="rank-name">${escapeHtml(s.user.username)}</span>
+                <span class="rank-value">${s.deaths} 💀</span>
+            </div>
+            ${deathSprites ? `<div class="ranking-sprites">${deathSprites}</div>` : ''}
+        `;
+    });
+
+    // --- MÁS SHINYS ---
+    const byShinys = [...stats].sort((a, b) => b.shinys - a.shinys);
+    const shinysEl = document.getElementById('ranking-shinys');
+    shinysEl.innerHTML = '';
+    byShinys.forEach((s, i) => {
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+        const shinySprites = s.shinyList.map(p =>
+            `<img src="${getSpriteUrl(p.speciesId, true)}" alt="${escapeHtml(p.species)}" title="✨ ${escapeHtml(p.nickname || p.species)} Lv.${p.level}" width="36" height="36" onerror="this.src='${SPRITE_BASE}0.png'">`
+        ).join('');
+        shinysEl.innerHTML += `
+            <div class="ranking-row ${i === 0 ? 'gold' : ''}">
+                <span class="rank-pos">${medal}</span>
+                <span class="rank-name">${escapeHtml(s.user.username)}</span>
+                <span class="rank-value">${s.shinys} ✨</span>
+            </div>
+            ${shinySprites ? `<div class="ranking-sprites">${shinySprites}</div>` : ''}
+        `;
+    });
 }

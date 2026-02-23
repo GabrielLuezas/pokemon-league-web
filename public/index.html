@@ -20,21 +20,70 @@
         <p>Dashboard de entrenadores — Pokémon X</p>
     </header>
 
+    <!-- Main Tabs -->
+    <nav class="league-tabs">
+        <button class="league-tab active" data-tab="trainers" onclick="switchLeagueTab('trainers')">👥 Entrenadores</button>
+        <button class="league-tab" data-tab="rankings" onclick="switchLeagueTab('rankings')">📊 Rankings</button>
+        <button class="league-tab" data-tab="battles" onclick="switchLeagueTab('battles')">⚔️ Combates</button>
+    </nav>
+
     <div class="container">
-        <!-- Trainers List -->
-        <section class="trainers-section" id="trainers-section">
-            <div class="section-title">
-                <span class="icon">👥</span>
-                <span>Entrenadores</span>
-                <span class="count" id="trainer-count">0</span>
+        <!-- TAB: Entrenadores -->
+        <section class="league-tab-content active" id="tab-trainers">
+            <div class="trainers-section" id="trainers-section">
+                <div class="section-title">
+                    <span class="icon">👥</span>
+                    <span>Entrenadores</span>
+                    <span class="count" id="trainer-count">0</span>
+                </div>
+                <div class="trainers-grid" id="trainers-grid"></div>
             </div>
-            <div class="trainers-grid" id="trainers-grid"></div>
+
+            <!-- Trainer Detail View (hidden initially) -->
+            <section class="detail-section" id="detail-section" style="display:none">
+                <button class="back-btn" id="back-btn" onclick="showTrainerList()">← Volver</button>
+                <div id="trainer-detail"></div>
+            </section>
         </section>
 
-        <!-- Trainer Detail View (hidden initially) -->
-        <section class="detail-section" id="detail-section" style="display:none">
-            <button class="back-btn" id="back-btn" onclick="showTrainerList()">← Volver</button>
-            <div id="trainer-detail"></div>
+        <!-- TAB: Rankings -->
+        <section class="league-tab-content" id="tab-rankings">
+            <!-- Más Puntos -->
+            <div class="ranking-section">
+                <div class="section-title">
+                    <span class="icon">🏆</span>
+                    <span>Más Puntos</span>
+                </div>
+                <div class="ranking-list" id="ranking-points"></div>
+            </div>
+
+            <!-- Más Muertos -->
+            <div class="ranking-section">
+                <div class="section-title">
+                    <span class="icon">💀</span>
+                    <span>Más Muertos</span>
+                </div>
+                <div class="ranking-list" id="ranking-deaths"></div>
+            </div>
+
+            <!-- Más Shinys -->
+            <div class="ranking-section">
+                <div class="section-title">
+                    <span class="icon">✨</span>
+                    <span>Más Shinys</span>
+                </div>
+                <div class="ranking-list" id="ranking-shinys"></div>
+            </div>
+        </section>
+
+        <!-- TAB: Combates -->
+        <section class="league-tab-content" id="tab-battles">
+            <div class="wip-panel">
+                <div class="wip-icon">🚧</div>
+                <h2>Combates — En Proceso</h2>
+                <p>Esta sección estará disponible próximamente.</p>
+                <p style="font-size:0.85rem;color:var(--text-muted);margin-top:8px;">Aquí podrás ver duelos y resultados entre entrenadores.</p>
+            </div>
         </section>
     </div>
 

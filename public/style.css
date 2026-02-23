@@ -839,3 +839,214 @@ header p {
     0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(32,191,107,0.5); }
     50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(32,191,107,0); }
 }
+
+/* ================== LEAGUE TABS ================== */
+.league-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    margin-bottom: 24px;
+}
+
+.league-tab {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 10px 24px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.league-tab:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.league-tab.active {
+    background: linear-gradient(135deg, rgba(103,126,234,0.2), rgba(118,75,162,0.2));
+    border-color: rgba(103,126,234,0.4);
+    color: var(--text-primary);
+}
+
+.league-tab-content {
+    display: none;
+}
+
+.league-tab-content.active {
+    display: block;
+}
+
+/* ================== RANKINGS ================== */
+.ranking-section {
+    margin-bottom: 28px;
+}
+
+.ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ranking-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    transition: all 0.3s ease;
+}
+
+.ranking-row:hover {
+    background: var(--bg-card-hover);
+}
+
+.ranking-row.gold {
+    border-color: rgba(255,211,42,0.35);
+    background: rgba(255,211,42,0.06);
+}
+
+.rank-pos {
+    font-size: 1.2rem;
+    min-width: 36px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.rank-name {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.rank-detail {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+}
+
+.rank-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.rank-sub {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.ranking-sprites {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 8px 18px 12px 68px;
+    background: rgba(30,30,50,0.5);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    margin-top: -6px;
+}
+
+.ranking-sprites img {
+    image-rendering: pixelated;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6));
+}
+
+/* ================== WIP PANEL ================== */
+.wip-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    text-align: center;
+    background: var(--bg-card);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius);
+}
+
+.wip-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+}
+
+.wip-panel h2 {
+    font-size: 1.3rem;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+
+.wip-panel p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* ================== DETAIL POINTS PANEL ================== */
+.detail-points-panel {
+    background: linear-gradient(135deg, rgba(103,126,234,0.12), rgba(118,75,162,0.12));
+    border: 1px solid rgba(103,126,234,0.25);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.detail-points-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.detail-points-total {
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    margin-bottom: 14px;
+}
+
+.detail-points-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.detail-points-item {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 20px;
+}
+
+.detail-points-item.earned {
+    color: #20bf6b;
+    background: rgba(32,191,107,0.1);
+}
+
+.detail-points-item.penalty {
+    color: #ff4757;
+    background: rgba(255,71,87,0.1);
+}
+
+.detail-points-shiny {
+    font-size: 0.85rem;
+    color: #ffd32a;
+    font-weight: 600;
+    margin-top: 4px;
+}
