@@ -1218,3 +1218,19 @@ header p {
         font-size: 0.55rem;
     }
 }
+
+/* ================== AVATAR IMAGES ================== */
+/* Displayed inside the circular avatar containers */
+.avatar-circle-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
+/* Smaller override for route trainer badge */
+.route-trainer-badge .avatar-circle-img {
+    width: 24px;
+    height: 24px;
+}

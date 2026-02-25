@@ -30,7 +30,7 @@ router.post('/register', async (req, res) => {
         // Hash password and create user
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, created_at',
+            'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, avatar_url, created_at',
             [username, hashedPassword]
         );
 
@@ -51,7 +51,7 @@ router.post('/register', async (req, res) => {
 
         res.status(201).json({
             token,
-            user: { id: user.id, username: user.username }
+            user: { id: user.id, username: user.username, avatar_url: user.avatar_url }
         });
     } catch (err) {
         console.error('Register error:', err);
@@ -87,7 +87,7 @@ router.post('/login', async (req, res) => {
 
         res.json({
             token,
-            user: { id: user.id, username: user.username }
+            user: { id: user.id, username: user.username, avatar_url: user.avatar_url }
         });
     } catch (err) {
         console.error('Login error:', err);
@@ -98,13 +98,31 @@ router.post('/login', async (req, res) => {
 // GET /api/auth/me
 router.get('/me', authMiddleware, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, username, created_at FROM users WHERE id = $1', [req.userId]);
+        const result = await pool.query('SELECT id, username, avatar_url, created_at FROM users WHERE id = $1', [req.userId]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
         res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: 'Error' });
+    }
+});
+
+// PUT /api/auth/avatar
+router.put('/avatar', authMiddleware, async (req, res) => {
+    try {
+        const { avatarUrl } = req.body;
+        if (avatarUrl && avatarUrl.length > 500000) {
+            return res.status(400).json({ error: 'Imagen demasiado grande (máx 500KB)' });
+        }
+        await pool.query(
+            'UPDATE users SET avatar_url = $1 WHERE id = $2',
+            [avatarUrl || null, req.userId]
+        );
+        res.json({ success: true, avatar_url: avatarUrl || null });
+    } catch (err) {
+        console.error('Avatar update error:', err);
+        res.status(500).json({ error: 'Error al actualizar avatar' });
     }
 });
 

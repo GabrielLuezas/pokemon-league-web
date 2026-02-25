@@ -7,6 +7,19 @@ let allUsers = [];
 let currentTrainer = null;
 let currentBox = 0;
 
+// ===================== AVATAR HELPER =====================
+
+/**
+ * Returns HTML for a round avatar circle — shows <img> if avatarUrl is set,
+ * else shows the initial letter. className is the CSS class of the container.
+ */
+function renderAvatarCircle(className, initial, avatarUrl, imgClass = 'avatar-circle-img') {
+    if (avatarUrl) {
+        return `<div class="${className}"><img src="${avatarUrl}" class="${imgClass}" alt="Avatar" onerror="this.parentNode.textContent='${escapeHtml(initial)}'"></div>`;
+    }
+    return `<div class="${className}">${escapeHtml(initial)}</div>`;
+}
+
 // ===================== INIT =====================
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -107,7 +120,7 @@ function renderTrainers() {
 
         card.innerHTML = `
             <div class="trainer-header">
-                <div class="trainer-avatar">${initial}</div>
+                ${renderAvatarCircle('trainer-avatar', initial, user.avatar_url)}
                 <div>
                     <div class="trainer-name">${escapeHtml(user.username)}</div>
                     <div class="trainer-meta">Última sync: ${updatedAt}</div>
@@ -173,7 +186,7 @@ function renderTrainerDetail(user) {
 
     detail.innerHTML = `
         <div class="detail-header">
-            <div class="detail-avatar">${initial}</div>
+            ${renderAvatarCircle('detail-avatar', initial, user.avatar_url)}
             <div>
                 <div class="trainer-name">${escapeHtml(user.username)}</div>
                 <div class="trainer-meta">Última sincronización: ${updatedAt}</div>
@@ -299,7 +312,7 @@ function renderActualContent(user) {
 
     container.innerHTML = `
         <div class="actual-trainer-card">
-            <div class="actual-trainer-avatar">${initial}</div>
+            ${renderAvatarCircle('actual-trainer-avatar', initial, user.avatar_url)}
             <div class="actual-trainer-info">
                 <div class="actual-trainer-name">${escapeHtml(trainerName)}</div>
                 <div class="actual-trainer-meta">
@@ -720,7 +733,7 @@ function renderRoutes() {
             if (!poke || poke.isEgg) return;
             const locId = poke.metLocation || 0;
             if (!routeMap[locId]) routeMap[locId] = [];
-            routeMap[locId].push({ pokemon: poke, username, initial });
+            routeMap[locId].push({ pokemon: poke, username, initial, avatarUrl: user.avatar_url || null });
         };
 
         party.forEach(addPoke);
@@ -764,9 +777,13 @@ function renderRoutes() {
         pokemonList.forEach(entry => {
             const p = entry.pokemon;
             const spriteUrl = getSpriteUrl(p.speciesId, p.isShiny);
+            // Route trainer badge: show avatar img or initial letter
+            const badgeContent = entry.avatarUrl
+                ? `<img src="${entry.avatarUrl}" class="avatar-circle-img" alt="" onerror="this.parentNode.textContent='${escapeHtml(entry.initial)}'">`
+                : entry.initial;
             slotsHTML += `
                 <div class="route-pokemon${p.isShiny ? ' shiny' : ''}" title="${escapeHtml(p.nickname || p.species)} Lv.${p.level} — ${escapeHtml(entry.username)}">
-                    <div class="route-trainer-badge">${entry.initial}</div>
+                    <div class="route-trainer-badge">${badgeContent}</div>
                     <img src="${spriteUrl}" alt="${escapeHtml(p.species)}" width="56" height="56" style="image-rendering:pixelated" onerror="this.src='${SPRITE_BASE}0.png'" />
                     <div class="route-poke-name">${escapeHtml(p.nickname || p.species)}</div>
                     <div class="route-poke-level">Lv.${p.level || '?'}</div>

@@ -70,6 +70,7 @@ app.get('/api/users', async (req, res) => {
             SELECT
                 u.id,
                 u.username,
+                u.avatar_url,
                 u.created_at,
                 sd.party,
                 sd.boxes,
@@ -95,6 +96,7 @@ app.get('/api/users/:id', async (req, res) => {
             SELECT
                 u.id,
                 u.username,
+                u.avatar_url,
                 u.created_at,
                 sd.party,
                 sd.boxes,

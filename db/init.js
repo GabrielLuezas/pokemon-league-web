@@ -8,8 +8,14 @@ async function initDB() {
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
+                avatar_url TEXT DEFAULT NULL,
                 created_at TIMESTAMP DEFAULT NOW()
             );
+        `);
+
+        // Add avatar_url column if table already exists without it
+        await client.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT NULL;
         `);
 
         await client.query(`
