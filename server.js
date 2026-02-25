@@ -23,28 +23,33 @@ app.use('/api/auth', authRoutes);
 
 app.post('/api/sync', authMiddleware, async (req, res) => {
     try {
-        const { party, boxes, nuzlocke, trainer } = req.body;
+        const { party, boxes, nuzlocke, trainer, nuzlockePoints, nuzlockePointsEarned } = req.body;
+        console.log(`[DEBUG] Syncing points -> Earned: ${nuzlockePointsEarned}, Total: ${nuzlockePoints}`);
 
         if (!party && !boxes) {
             return res.status(400).json({ error: 'No save data provided' });
         }
 
         await pool.query(
-            `INSERT INTO save_data (user_id, party, boxes, nuzlocke, trainer, updated_at)
-             VALUES ($1, $2, $3, $4, $5, NOW())
+            `INSERT INTO save_data (user_id, party, boxes, nuzlocke, trainer, nuzlocke_points, nuzlocke_points_earned, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
              ON CONFLICT (user_id)
              DO UPDATE SET
                 party = COALESCE($2, save_data.party),
                 boxes = COALESCE($3, save_data.boxes),
                 nuzlocke = COALESCE($4, save_data.nuzlocke),
                 trainer = COALESCE($5, save_data.trainer),
+                nuzlocke_points = $6,
+                nuzlocke_points_earned = $7,
                 updated_at = NOW()`,
             [
                 req.userId,
                 JSON.stringify(party || []),
                 JSON.stringify(boxes || []),
                 JSON.stringify(nuzlocke || { deaths: [], enabled: true }),
-                JSON.stringify(trainer || {})
+                JSON.stringify(trainer || {}),
+                nuzlockePoints ?? 0,
+                nuzlockePointsEarned ?? 0
             ]
         );
 
@@ -70,6 +75,8 @@ app.get('/api/users', async (req, res) => {
                 sd.boxes,
                 sd.nuzlocke,
                 sd.trainer,
+                sd.nuzlocke_points,
+                sd.nuzlocke_points_earned,
                 sd.updated_at
             FROM users u
             LEFT JOIN save_data sd ON sd.user_id = u.id
@@ -93,6 +100,8 @@ app.get('/api/users/:id', async (req, res) => {
                 sd.boxes,
                 sd.nuzlocke,
                 sd.trainer,
+                sd.nuzlocke_points,
+                sd.nuzlocke_points_earned,
                 sd.updated_at
             FROM users u
             LEFT JOIN save_data sd ON sd.user_id = u.id

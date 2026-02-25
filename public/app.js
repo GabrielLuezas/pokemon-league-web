@@ -258,11 +258,10 @@ function renderActualContent(user) {
 
     // Points & challenges calculation
     const stats = getTrainerStats(user);
-    const earnedFromBadges = (stats.badges * 100);
-    let speciesMilestones = 0;
-    [10, 25, 50, 100].forEach(t => { if (stats.uniqueSpecies >= t) speciesMilestones++; });
-    const earnedFromSpecies = speciesMilestones * 100;
     const deathPenalty = stats.deaths * 50;
+    const displayPoints = user.nuzlocke_points != null ? user.nuzlocke_points : stats.points;
+    const displayEarned = user.nuzlocke_points_earned != null ? user.nuzlocke_points_earned : 0;
+    const displayPenalty = deathPenalty;
 
     const badgesHTML = KALOS_BADGES.map((badge, i) => {
         const earned = badges[i] || false;
@@ -316,11 +315,13 @@ function renderActualContent(user) {
                 <span>🏆</span>
                 <span>Puntos Nuzlocke</span>
             </div>
-            <div class="detail-points-total">${stats.points}</div>
+            <div class="detail-points-total">${displayPoints}</div>
+            <div class="detail-points-badges">
+                <span class="points-badge earned">+${displayEarned}</span>
+                ${displayPenalty > 0 ? `<span class="points-badge penalty">-${displayPenalty}</span>` : ''}
+            </div>
             <div class="detail-points-breakdown">
-                <div class="detail-points-item earned">🏅 Medallas: +${earnedFromBadges}</div>
-                <div class="detail-points-item earned">📖 Especies (${stats.uniqueSpecies}): +${earnedFromSpecies}</div>
-                <div class="detail-points-item penalty">💀 Muertes (${stats.deaths}): -${deathPenalty}</div>
+                ${stats.deaths > 0 ? `<div class="detail-points-item penalty">💀 Muertes: ${stats.deaths} (-${deathPenalty} c/u)</div>` : ''}
             </div>
             ${stats.shinys > 0 ? `<div class="detail-points-shiny">✨ Shinys encontrados: ${stats.shinys}</div>` : ''}
         </section>
@@ -812,9 +813,8 @@ function getTrainerStats(user) {
     party.forEach(p => { if (p && p.isShiny) { shinys++; shinyList.push(p); } });
     boxes.forEach(b => (b.slots || []).forEach(p => { if (p && p.isShiny) { shinys++; shinyList.push(p); } }));
 
-    // Points: badges * 100 + unique species milestone bonuses - deaths * 50
+    // Points: use pre-computed value from server if available, fallback to badges*100 - deaths*50
     let points = badges * 100;
-    [10, 25, 50, 100].forEach(t => { if (uniqueSpecies >= t) points += 100; });
     points -= deaths * 50;
 
     return { deaths, badges, uniqueSpecies, shinys, shinyList, points, deathList: nuzlocke.deaths || [] };
@@ -826,10 +826,11 @@ function renderRankings() {
     const stats = allUsers.map(user => ({
         user,
         ...getTrainerStats(user),
+        displayPoints: user.nuzlocke_points != null ? user.nuzlocke_points : 0,
     }));
 
     // --- MÁS PUNTOS ---
-    const byPoints = [...stats].sort((a, b) => b.points - a.points);
+    const byPoints = [...stats].sort((a, b) => b.displayPoints - a.displayPoints);
     const pointsEl = document.getElementById('ranking-points');
     pointsEl.innerHTML = '';
     byPoints.forEach((s, i) => {
@@ -839,7 +840,7 @@ function renderRankings() {
                 <span class="rank-pos">${medal}</span>
                 <span class="rank-name">${escapeHtml(s.user.username)}</span>
                 <span class="rank-detail">
-                    <span class="rank-value">${s.points} pts</span>
+                    <span class="rank-value">${s.displayPoints} pts</span>
                     <span class="rank-sub">🏅${s.badges} | 📖${s.uniqueSpecies} | 💀${s.deaths}</span>
                 </span>
             </div>

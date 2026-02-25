@@ -20,6 +20,8 @@ async function initDB() {
                 boxes JSONB DEFAULT '[]',
                 nuzlocke JSONB DEFAULT '{"deaths":[],"enabled":true}',
                 trainer JSONB DEFAULT '{}',
+                nuzlocke_points INTEGER DEFAULT 0,
+                nuzlocke_points_earned INTEGER DEFAULT 0,
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         `);
@@ -27,6 +29,16 @@ async function initDB() {
         // Add trainer column if table already exists without it
         await client.query(`
             ALTER TABLE save_data ADD COLUMN IF NOT EXISTS trainer JSONB DEFAULT '{}';
+        `);
+
+        // Add nuzlocke_points column if table already exists without it
+        await client.query(`
+            ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points INTEGER DEFAULT 0;
+        `);
+
+        // Add nuzlocke_points_earned column if table already exists without it
+        await client.query(`
+            ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points_earned INTEGER DEFAULT 0;
         `);
 
         console.log('✅ Database tables initialized');
