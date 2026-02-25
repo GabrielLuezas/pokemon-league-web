@@ -1050,3 +1050,144 @@ header p {
     font-weight: 600;
     margin-top: 4px;
 }
+
+/* ================== ROUTES TAB ================== */
+#routes-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.route-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 24px;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-card);
+    transition: all 0.3s ease;
+}
+.route-box:hover {
+    border-color: rgba(100, 100, 180, 0.35);
+}
+
+.route-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+.route-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    flex: 1;
+}
+.route-sub {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-weight: 400;
+}
+.route-count {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(100,100,180,0.15);
+    padding: 3px 12px;
+    border-radius: 20px;
+    flex-shrink: 0;
+}
+
+.route-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+}
+
+.route-pokemon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 8px 10px;
+    background: rgba(20, 20, 40, 0.5);
+    border: 1px solid rgba(100, 100, 180, 0.1);
+    border-radius: var(--radius-sm);
+    cursor: default;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.route-pokemon:hover {
+    background: rgba(40, 40, 65, 0.7);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+}
+.route-pokemon.shiny {
+    border-color: rgba(255, 211, 42, 0.25);
+    box-shadow: 0 0 12px rgba(255, 211, 42, 0.08);
+}
+.route-pokemon.shiny::after {
+    content: "✨";
+    position: absolute;
+    top: 3px; right: 5px;
+    font-size: 0.6rem;
+}
+.route-pokemon img {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    margin-bottom: 4px;
+}
+
+.route-trainer-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: white;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(103, 126, 234, 0.4);
+    z-index: 2;
+}
+
+.route-poke-name {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.route-poke-level {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+/* ================== RESPONSIVE — ROUTES ================== */
+@media (max-width: 768px) {
+    .route-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 8px;
+    }
+    .route-pokemon {
+        padding: 8px 4px 6px;
+    }
+    .route-pokemon img {
+        width: 44px !important;
+        height: 44px !important;
+    }
+    .route-trainer-badge {
+        width: 18px; height: 18px;
+        font-size: 0.55rem;
+    }
+}

@@ -23,6 +23,7 @@
     <!-- Main Tabs -->
     <nav class="league-tabs">
         <button class="league-tab active" data-tab="trainers" onclick="switchLeagueTab('trainers')">👥 Entrenadores</button>
+        <button class="league-tab" data-tab="routes" onclick="switchLeagueTab('routes')">🗺️ Rutas</button>
         <button class="league-tab" data-tab="rankings" onclick="switchLeagueTab('rankings')">📊 Rankings</button>
         <button class="league-tab" data-tab="battles" onclick="switchLeagueTab('battles')">⚔️ Combates</button>
     </nav>
@@ -44,6 +45,16 @@
                 <button class="back-btn" id="back-btn" onclick="showTrainerList()">← Volver</button>
                 <div id="trainer-detail"></div>
             </section>
+        </section>
+
+        <!-- TAB: Rutas -->
+        <section class="league-tab-content" id="tab-routes">
+            <div class="section-title">
+                <span class="icon">🗺️</span>
+                <span>Pokémon por Ruta</span>
+                <span class="count" id="routes-count">0</span>
+            </div>
+            <div id="routes-container"></div>
         </section>
 
         <!-- TAB: Rankings -->

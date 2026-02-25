@@ -36,6 +36,7 @@ async function loadTrainers() {
         allUsers = await res.json();
         renderTrainers();
         renderRankings();
+        renderRoutes();
         document.getElementById('loading').classList.add('hidden');
     } catch (err) {
         console.error('Error loading trainers:', err);
@@ -630,6 +631,152 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ===================== KALOS LOCATION NAMES (PKHeX XY es) =====================
+
+// Location ID → Spanish name from PKHeX text_xy_00000_es.txt
+// IDs = 0-based line index in the file (confirmed with save data)
+const KALOS_LOCATIONS = {
+    0: '—', 2: 'Lugar misterioso', 4: 'Lugar lejano',
+    6: 'Pueblo Boceto', 8: 'Ruta 1', 9: 'Sendero Boceto',
+    10: 'Pueblo Acuarela',
+    12: 'Ruta 2', 13: 'Vía del Avance', 14: 'Bosque de Novarte',
+    16: 'Ruta 3', 17: 'Senda Despejada', 18: 'Ciudad Novarte',
+    20: 'Ruta 4', 21: 'Senda del Parterre', 22: 'Ciudad Luminalia',
+    24: 'Torre Prisma', 26: 'Laboratorios Lysson',
+    28: 'Ruta 5', 29: 'Vía Repecho', 30: 'Pueblo Vánitas',
+    32: 'Castillo Caduco', 34: 'Ruta 6', 35: 'Alameda del Palacio',
+    36: 'Palacio Cénit', 38: 'Ruta 7', 39: 'Paseo de la Ribera',
+    40: 'Ciudad Relieve', 42: 'Ruta 8', 43: 'Muralla Costera',
+    44: 'Pueblo Petroglifo', 46: 'Ruta 9', 47: 'Paso de Rhyhorn',
+    48: 'Bastión Batalla', 50: 'Ruta 10', 51: 'Camino Menhires',
+    52: 'Pueblo Crómlech', 54: 'Ruta 11', 55: 'Senda Reflejos',
+    56: 'Cueva Reflejos', 58: 'Ciudad Yantra', 60: 'Torre Maestra',
+    62: 'Ruta 12', 63: 'Vereda del Heno', 64: 'Ciudad Témpera',
+    66: 'Ruta 13', 67: 'Páramo de Luminalia',
+    68: 'Ruta 14', 69: 'Arboleda Romantis', 70: 'Ciudad Romantis',
+    72: 'Fábrica Poké Balls', 74: 'Ruta 15', 75: 'Sendero Hojarasca',
+    76: 'Pueblo Fresco', 78: 'Ruta 16', 79: 'Senda Melancolía',
+    82: 'Gruta Helada', 84: 'Ruta 17', 85: 'Sendero Mamoswine',
+    86: 'Ciudad Fluxus', 88: 'Ruta 18', 89: 'Senda Valle Angosto',
+    90: 'Pueblo Mosaico', 92: 'Ruta 19', 93: 'Senda del Gran Valle',
+    94: 'Ciudad Fractal', 96: 'Ruta 20', 97: 'Bosque Errantes',
+    98: 'Villa Pokémon', 100: 'Ruta 21', 101: 'Vía Ultimia',
+    102: 'Ruta 22', 103: 'Vía Desvío', 104: 'Calle Victoria',
+    106: 'Liga Pokémon', 108: 'Ciudad Batik', 110: 'Mansión Batalla',
+    112: 'Bahía Azul', 114: 'Acceso a Fresco', 116: 'Acceso a Mosaico',
+    118: 'Acceso a Petroglifo', 120: 'Acceso a Luminalia',
+    122: 'Acceso a Yantra', 124: 'Acceso a Témpera',
+    126: 'Acceso a Romantis', 128: 'Acceso a Fluxus',
+    130: 'Acceso a Fractal', 132: 'Cueva Brillante',
+    134: 'Gruta Tierraunida', 135: 'Escondrijo Zubat',
+    136: 'Central de Kalos', 138: 'Guarida Team Flare',
+    140: 'Cueva Desenlace', 142: 'Hotel Desolación',
+    144: 'Estancia Vacua', 146: 'Cueva Talasia',
+    148: 'Safari Amistad', 150: 'Sala de las Llamas',
+    152: 'Sala de la Esclusa', 154: 'Sala del Metal',
+    156: 'Sala del Draco', 158: 'Sala de la Luz',
+    160: 'Acceso Liga Pokémon', 162: 'Estación Luminalia',
+    164: 'Estación Batik', 166: 'Acuario Petroglifo',
+    168: 'Mazmorra Rara',
+};
+
+// Special display names and emojis for certain locations
+const LOCATION_DISPLAY = {
+    10: { name: '🎁 Starters', sub: 'Pueblo Acuarela' },
+    14: { name: '🌲 Bosque de Novarte', sub: 'Santalune Forest' },
+    22: { name: '🏙️ Ciudad Luminalia', sub: 'Agua / Intercambio' },
+    24: { name: '🗼 Torre Prisma', sub: 'Ciudad Luminalia' },
+    56: { name: '🪞 Cueva Reflejos', sub: 'Reflection Cave' },
+    82: { name: '❄️ Gruta Helada', sub: 'Frost Cavern' },
+    106: { name: '🏆 Liga Pokémon', sub: 'Pokémon League' },
+    112: { name: '🌊 Bahía Azul', sub: 'Azure Bay' },
+    132: { name: '💎 Cueva Brillante', sub: 'Glittering Cave' },
+    136: { name: '⚡ Central de Kalos', sub: 'Power Plant' },
+    138: { name: '🔥 Guarida Team Flare', sub: 'Team Flare HQ' },
+    140: { name: '🏔️ Cueva Desenlace', sub: 'Terminus Cave' },
+    148: { name: '🦋 Safari Amistad', sub: 'Friend Safari' },
+};
+
+// ===================== ROUTES TAB =====================
+
+function renderRoutes() {
+    const container = document.getElementById('routes-container');
+    const countEl = document.getElementById('routes-count');
+    if (!container) return;
+
+    // Collect ALL pokemon from ALL users
+    const routeMap = {}; // locationId → [{ pokemon, username, initial }]
+
+    allUsers.forEach(user => {
+        const username = user.username || 'Unknown';
+        const initial = username.charAt(0).toUpperCase();
+        const party = user.party || [];
+        const boxes = user.boxes || [];
+
+        const addPoke = (poke) => {
+            if (!poke || poke.isEgg) return;
+            const locId = poke.metLocation || 0;
+            if (!routeMap[locId]) routeMap[locId] = [];
+            routeMap[locId].push({ pokemon: poke, username, initial });
+        };
+
+        party.forEach(addPoke);
+        boxes.forEach(box => (box.slots || []).forEach(addPoke));
+    });
+
+    // Sort location IDs in game order
+    const locationIds = Object.keys(routeMap).map(Number).sort((a, b) => a - b);
+
+    // Filter out location 0 (unknown)
+    const validIds = locationIds.filter(id => id > 0);
+    if (countEl) countEl.textContent = validIds.length;
+
+    if (validIds.length === 0) {
+        container.innerHTML = `
+            <div class="no-data-msg"><span class="icon">🗺️</span><p>Sin datos de rutas aún</p></div>
+        `;
+        return;
+    }
+
+    container.innerHTML = '';
+
+    validIds.forEach(locId => {
+        const pokemonList = routeMap[locId];
+        const display = LOCATION_DISPLAY[locId];
+        const locName = display ? display.name : (KALOS_LOCATIONS[locId] || `Ubicación #${locId}`);
+        const locSub = display ? display.sub : '';
+
+        const routeBox = document.createElement('div');
+        routeBox.className = 'route-box';
+
+        const headerHTML = `
+            <div class="route-header">
+                <div class="route-title">${locName}</div>
+                ${locSub ? `<div class="route-sub">${locSub}</div>` : ''}
+                <span class="route-count">${pokemonList.length}</span>
+            </div>
+        `;
+
+        let slotsHTML = '<div class="route-grid">';
+        pokemonList.forEach(entry => {
+            const p = entry.pokemon;
+            const spriteUrl = getSpriteUrl(p.speciesId, p.isShiny);
+            slotsHTML += `
+                <div class="route-pokemon${p.isShiny ? ' shiny' : ''}" title="${escapeHtml(p.nickname || p.species)} Lv.${p.level} — ${escapeHtml(entry.username)}">
+                    <div class="route-trainer-badge">${entry.initial}</div>
+                    <img src="${spriteUrl}" alt="${escapeHtml(p.species)}" width="56" height="56" style="image-rendering:pixelated" onerror="this.src='${SPRITE_BASE}0.png'" />
+                    <div class="route-poke-name">${escapeHtml(p.nickname || p.species)}</div>
+                    <div class="route-poke-level">Lv.${p.level || '?'}</div>
+                </div>
+            `;
+        });
+        slotsHTML += '</div>';
+
+        routeBox.innerHTML = headerHTML + slotsHTML;
+        container.appendChild(routeBox);
+    });
 }
 
 // ===================== LEAGUE TABS =====================
