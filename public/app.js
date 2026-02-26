@@ -50,6 +50,7 @@ async function loadTrainers() {
         renderTrainers();
         renderRankings();
         renderRoutes();
+        renderGymLeaders();
         document.getElementById('loading').classList.add('hidden');
     } catch (err) {
         console.error('Error loading trainers:', err);
@@ -833,9 +834,24 @@ function getTrainerStats(user) {
     // Points: use pre-computed value from server if available, fallback to badges*100 - deaths*50
     let points = badges * 100;
     points -= deaths * 50;
-
     return { deaths, badges, uniqueSpecies, shinys, shinyList, points, deathList: nuzlocke.deaths || [] };
 }
+
+// ===================== RANKING SUB-TABS =====================
+
+let activeRankingTab = 'points';
+
+function switchRankingTab(tab) {
+    activeRankingTab = tab;
+    document.querySelectorAll('.ranking-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.rtab === tab);
+    });
+    document.querySelectorAll('.ranking-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `rpanel-${tab}`);
+    });
+}
+
+// ===================== RANKINGS =====================
 
 function renderRankings() {
     if (!allUsers || allUsers.length === 0) return;
@@ -846,59 +862,304 @@ function renderRankings() {
         displayPoints: user.nuzlocke_points != null ? user.nuzlocke_points : 0,
     }));
 
-    // --- MÁS PUNTOS ---
-    const byPoints = [...stats].sort((a, b) => b.displayPoints - a.displayPoints);
-    const pointsEl = document.getElementById('ranking-points');
-    pointsEl.innerHTML = '';
-    byPoints.forEach((s, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
-        pointsEl.innerHTML += `
-            <div class="ranking-row ${i === 0 ? 'gold' : ''}">
-                <span class="rank-pos">${medal}</span>
-                <span class="rank-name">${escapeHtml(s.user.username)}</span>
-                <span class="rank-detail">
-                    <span class="rank-value">${s.displayPoints} pts</span>
-                    <span class="rank-sub">🏅${s.badges} | 📖${s.uniqueSpecies} | 💀${s.deaths}</span>
-                </span>
+    // Get logged-in username from localStorage (set by auth)
+    const loggedUsername = localStorage.getItem('username') || null;
+
+    buildRankingCategory(
+        'ranking-points',
+        [...stats].sort((a, b) => b.displayPoints - a.displayPoints),
+        s => s.displayPoints,
+        v => `${v} pts`,
+        loggedUsername,
+        'puntos'
+    );
+
+    buildRankingCategory(
+        'ranking-deaths',
+        [...stats].sort((a, b) => b.deaths - a.deaths),
+        s => s.deaths,
+        v => `${v} 💀`,
+        loggedUsername,
+        'muertes'
+    );
+
+    buildRankingCategory(
+        'ranking-shinys',
+        [...stats].sort((a, b) => b.shinys - a.shinys),
+        s => s.shinys,
+        v => `${v} ✨`,
+        loggedUsername,
+        'shinys'
+    );
+}
+
+/**
+ * Build a full ranking panel: podium (top 3) + list (4–10) + user position footer.
+ * @param {string} containerId  - The element id to render into
+ * @param {Array}  sorted       - Stats array sorted by the category descending
+ * @param {Function} getValue   - (statEntry) => numeric value
+ * @param {Function} formatVal  - (value) => display string
+ * @param {string|null} loggedUsername
+ * @param {string} unitLabel    - 'puntos' | 'muertes' | 'shinys'
+ */
+function buildRankingCategory(containerId, sorted, getValue, formatVal, loggedUsername, unitLabel) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    // Assign ranks (shared on tie)
+    const ranked = [];
+    let rank = 1;
+    sorted.forEach((s, i) => {
+        if (i > 0 && getValue(s) !== getValue(sorted[i - 1])) {
+            rank = i + 1;
+        }
+        ranked.push({ ...s, rank });
+    });
+
+    const top10 = ranked.slice(0, 10);
+    const loggedEntry = loggedUsername
+        ? ranked.find(r => r.user.username.toLowerCase() === loggedUsername.toLowerCase())
+        : null;
+    const loggedInTop10 = loggedEntry ? top10.some(r => r.user.id === loggedEntry.user.id) : false;
+
+    // ---- PODIUM (top 3) ----
+    // Build slots with metadata BEFORE filtering so pos/medal don't shift
+    const podiumSlots = [
+        { entry: top10[1], pos: 'silver', medal: '🥈', size: 64 },
+        { entry: top10[0], pos: 'gold',   medal: '🥇', size: 80 },
+        { entry: top10[2], pos: 'bronze', medal: '🥉', size: 64 },
+    ].filter(s => s.entry);
+
+    function avatarHTML(entry, size, cls) {
+        const initial = entry.user.username.charAt(0).toUpperCase();
+        const url = entry.user.avatar_url;
+        if (url) {
+            return `<div class="podium-avatar ${cls}" style="width:${size}px;height:${size}px"><img src="${url}" class="avatar-circle-img" alt="${escapeHtml(initial)}" onerror="this.parentNode.textContent='${escapeHtml(initial)}'"></div>`;
+        }
+        return `<div class="podium-avatar ${cls}" style="width:${size}px;height:${size}px">${escapeHtml(initial)}</div>`;
+    }
+
+    const isLogged = (entry) => loggedUsername && entry.user.username.toLowerCase() === loggedUsername.toLowerCase();
+
+    let podiumHTML = '<div class="podium-container">';
+    podiumSlots.forEach(({ entry, pos, medal, size }) => {
+        const highlight = isLogged(entry) ? ' podium-logged' : '';
+        podiumHTML += `
+            <div class="podium-slot ${pos}${highlight}">
+                ${avatarHTML(entry, size, `podium-avatar-${pos}`)}
+                <div class="podium-medal">${medal}</div>
+                <div class="podium-name">${escapeHtml(entry.user.username)}</div>
+                <div class="podium-value">${formatVal(getValue(entry))}</div>
+                <div class="podium-rank-bar ${pos}"></div>
+            </div>
+        `;
+    });
+    podiumHTML += '</div>';
+
+    // ---- TOP 10 LIST (positions 4-10) ----
+    const listEntries = top10.slice(3);
+    let listHTML = '';
+    if (listEntries.length > 0) {
+        listHTML = '<div class="ranking-list-top10">';
+        listEntries.forEach(entry => {
+            const highlight = isLogged(entry) ? ' ranking-row-logged' : '';
+            const initial = entry.user.username.charAt(0).toUpperCase();
+            const url = entry.user.avatar_url;
+            const avatarEl = url
+                ? `<div class="rank-avatar"><img src="${url}" class="avatar-circle-img" alt="${escapeHtml(initial)}" onerror="this.parentNode.textContent='${escapeHtml(initial)}'"></div>`
+                : `<div class="rank-avatar">${escapeHtml(initial)}</div>`;
+            listHTML += `
+                <div class="ranking-row${highlight}">
+                    <span class="rank-pos">#${entry.rank}</span>
+                    ${avatarEl}
+                    <span class="rank-name">${escapeHtml(entry.user.username)}</span>
+                    <span class="rank-value">${formatVal(getValue(entry))}</span>
+                </div>
+            `;
+        });
+        listHTML += '</div>';
+    }
+
+    // ---- USER POSITION FOOTER (if not in top 10) ----
+    let footerHTML = '';
+    if (loggedEntry && !loggedInTop10) {
+        footerHTML = `
+            <div class="ranking-user-footer">
+                <span class="ranking-user-footer-icon">🎖️</span>
+                <span>Tú estás <strong>top ${loggedEntry.rank}</strong> con <strong>${formatVal(getValue(loggedEntry))}</strong> ${unitLabel}</span>
+            </div>
+        `;
+    }
+
+    el.innerHTML = podiumHTML + listHTML + footerHTML;
+}
+
+// ===================== INFO TAB =====================
+
+let activeInfoTab = 'gym-leaders';
+
+function switchInfoTab(tab) {
+    activeInfoTab = tab;
+    document.querySelectorAll('.info-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.itab === tab);
+    });
+    document.querySelectorAll('.info-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `ipanel-${tab}`);
+    });
+}
+
+// ===================== GYM LEADERS =====================
+
+const GYM_LEADERS = [
+    {
+        num: 1,
+        name: 'Violeta',
+        gym: 'Ciudad Novarte',
+        level: 14,
+        badge: '/badges/Medalla1.png',
+        badgeName: 'Medalla Escarabajo',
+    },
+    {
+        num: 2,
+        name: 'Corbin',
+        gym: 'Ciudad Relieve',
+        level: 30,
+        badge: '/badges/Medalla2.png',
+        badgeName: 'Medalla Muro',
+    },
+    {
+        num: 3,
+        name: 'Corelia',
+        gym: 'Ciudad Yantra',
+        level: 38,
+        badge: '/badges/Medalla3.png',
+        badgeName: 'Medalla Combate',
+    },
+    {
+        num: 4,
+        name: 'Ramos',
+        gym: 'Ciudad Témpera',
+        level: 41,
+        badge: '/badges/Medalla4.png',
+        badgeName: 'Medalla Planta',
+    },
+    {
+        num: 5,
+        name: 'Lumio',
+        gym: 'Ciudad Luminalia',
+        level: 44,
+        badge: '/badges/Medalla5.png',
+        badgeName: 'Medalla Voltaje',
+    },
+    {
+        num: 6,
+        name: 'Valerie',
+        gym: 'Ciudad Romantis',
+        level: 50,
+        badge: '/badges/Medalla6.png',
+        badgeName: 'Medalla Hada',
+    },
+    {
+        num: 7,
+        name: 'Olimpia',
+        gym: 'Ciudad Fluxus',
+        level: 58,
+        badge: '/badges/Medalla7.png',
+        badgeName: 'Medalla Psíquico',
+    },
+    {
+        num: 8,
+        name: 'Wulfric',
+        gym: 'Ciudad Fractal',
+        level: 71,
+        badge: '/badges/Medalla8.png',
+        badgeName: 'Medalla Iceberg',
+    },
+];
+
+const ELITE_FOUR = [
+    {
+        num: 'E4',
+        name: 'Alto Mando',
+        gym: 'Liga Pokémon',
+        icon: '⚔️',
+        level: 78,
+        isElite: true,
+    },
+    {
+        num: 'C',
+        name: 'Diantha',
+        gym: 'Campeona',
+        icon: '🏆',
+        level: 82,
+        isChampion: true,
+    },
+];
+
+function renderGymLeaders() {
+    const container = document.getElementById('gym-leaders-content');
+    if (!container) return;
+
+    let html = '';
+
+    // Gym leaders title
+    html += `
+        <div class="gym-leaders-header">
+            <div class="section-title"><span class="icon">🏟️</span><span>Líderes de Gimnasio</span></div>
+        </div>
+        <div class="gym-leaders-grid">
+    `;
+
+    GYM_LEADERS.forEach(leader => {
+        html += `
+            <div class="gym-leader-card">
+                <div class="gym-leader-num">#${leader.num}</div>
+                <div class="gym-leader-badge-wrap">
+                    <img src="${leader.badge}" alt="${leader.badgeName}" class="gym-leader-badge-img" onerror="this.style.opacity='0.3'" />
+                </div>
+                <div class="gym-leader-info">
+                    <div class="gym-leader-name">${escapeHtml(leader.name)}</div>
+                    <div class="gym-leader-gym">${escapeHtml(leader.gym)}</div>
+                </div>
+                <div class="gym-leader-level">
+                    <span class="gym-level-label">Nivel</span>
+                    <span class="gym-level-value">${leader.level}</span>
+                </div>
             </div>
         `;
     });
 
-    // --- MÁS MUERTOS ---
-    const byDeaths = [...stats].sort((a, b) => b.deaths - a.deaths);
-    const deathsEl = document.getElementById('ranking-deaths');
-    deathsEl.innerHTML = '';
-    byDeaths.forEach((s, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
-        const deathSprites = s.deathList.map(d =>
-            `<img src="${getSpriteUrl(d.speciesId, d.isShiny)}" alt="${escapeHtml(d.species)}" title="${escapeHtml(d.nickname || d.species)} Lv.${d.level}" width="36" height="36" onerror="this.src='${SPRITE_BASE}0.png'">`
-        ).join('');
-        deathsEl.innerHTML += `
-            <div class="ranking-row ${i === 0 ? 'gold' : ''}">
-                <span class="rank-pos">${medal}</span>
-                <span class="rank-name">${escapeHtml(s.user.username)}</span>
-                <span class="rank-value">${s.deaths} 💀</span>
+    html += '</div>';
+
+    // Elite Four & Champion
+    html += `
+        <div class="gym-leaders-header" style="margin-top:40px">
+            <div class="section-title"><span class="icon">👑</span><span>Élite y Campeona</span></div>
+        </div>
+        <div class="gym-leaders-grid gym-elite-grid">
+    `;
+
+    ELITE_FOUR.forEach(entry => {
+        const cardClass = entry.isChampion ? 'gym-leader-card gym-champion-card' : 'gym-leader-card gym-elite-card';
+        html += `
+            <div class="${cardClass}">
+                <div class="gym-leader-num${entry.isChampion ? ' champion-num' : ' elite-num'}">${entry.isChampion ? '👑' : '⚔️'}</div>
+                <div class="gym-leader-badge-wrap">
+                    <div class="gym-leader-no-badge">${entry.icon}</div>
+                </div>
+                <div class="gym-leader-info">
+                    <div class="gym-leader-name">${escapeHtml(entry.name)}</div>
+                    <div class="gym-leader-gym">${escapeHtml(entry.gym)}</div>
+                </div>
+                <div class="gym-leader-level${entry.isChampion ? ' champion-level' : ' elite-level'}">
+                    <span class="gym-level-label">Nivel</span>
+                    <span class="gym-level-value">${entry.level}</span>
+                </div>
             </div>
-            ${deathSprites ? `<div class="ranking-sprites">${deathSprites}</div>` : ''}
         `;
     });
 
-    // --- MÁS SHINYS ---
-    const byShinys = [...stats].sort((a, b) => b.shinys - a.shinys);
-    const shinysEl = document.getElementById('ranking-shinys');
-    shinysEl.innerHTML = '';
-    byShinys.forEach((s, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
-        const shinySprites = s.shinyList.map(p =>
-            `<img src="${getSpriteUrl(p.speciesId, true)}" alt="${escapeHtml(p.species)}" title="✨ ${escapeHtml(p.nickname || p.species)} Lv.${p.level}" width="36" height="36" onerror="this.src='${SPRITE_BASE}0.png'">`
-        ).join('');
-        shinysEl.innerHTML += `
-            <div class="ranking-row ${i === 0 ? 'gold' : ''}">
-                <span class="rank-pos">${medal}</span>
-                <span class="rank-name">${escapeHtml(s.user.username)}</span>
-                <span class="rank-value">${s.shinys} ✨</span>
-            </div>
-            ${shinySprites ? `<div class="ranking-sprites">${shinySprites}</div>` : ''}
-        `;
-    });
+    html += '</div>';
+
+    container.innerHTML = html;
 }

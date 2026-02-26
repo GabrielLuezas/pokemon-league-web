@@ -25,6 +25,7 @@
         <button class="league-tab active" data-tab="trainers" onclick="switchLeagueTab('trainers')">👥 Entrenadores</button>
         <button class="league-tab" data-tab="routes" onclick="switchLeagueTab('routes')">🗺️ Rutas</button>
         <button class="league-tab" data-tab="rankings" onclick="switchLeagueTab('rankings')">📊 Rankings</button>
+        <button class="league-tab" data-tab="info" onclick="switchLeagueTab('info')">📋 Información</button>
         <button class="league-tab" data-tab="battles" onclick="switchLeagueTab('battles')">⚔️ Combates</button>
     </nav>
 
@@ -59,31 +60,122 @@
 
         <!-- TAB: Rankings -->
         <section class="league-tab-content" id="tab-rankings">
-            <!-- Más Puntos -->
-            <div class="ranking-section">
-                <div class="section-title">
-                    <span class="icon">🏆</span>
-                    <span>Más Puntos</span>
-                </div>
-                <div class="ranking-list" id="ranking-points"></div>
+            <!-- Ranking Sub-Tabs -->
+            <div class="ranking-tabs">
+                <button class="ranking-tab active" data-rtab="points" onclick="switchRankingTab('points')">🏆 Más Puntos</button>
+                <button class="ranking-tab" data-rtab="deaths" onclick="switchRankingTab('deaths')">💀 Más Muertos</button>
+                <button class="ranking-tab" data-rtab="shinys" onclick="switchRankingTab('shinys')">✨ Más Shinys</button>
             </div>
 
-            <!-- Más Muertos -->
-            <div class="ranking-section">
-                <div class="section-title">
-                    <span class="icon">💀</span>
-                    <span>Más Muertos</span>
-                </div>
-                <div class="ranking-list" id="ranking-deaths"></div>
+            <!-- Puntos Panel -->
+            <div class="ranking-panel active" id="rpanel-points">
+                <div id="ranking-points"></div>
             </div>
 
-            <!-- Más Shinys -->
-            <div class="ranking-section">
-                <div class="section-title">
-                    <span class="icon">✨</span>
-                    <span>Más Shinys</span>
+            <!-- Muertos Panel -->
+            <div class="ranking-panel" id="rpanel-deaths">
+                <div id="ranking-deaths"></div>
+            </div>
+
+            <!-- Shinys Panel -->
+            <div class="ranking-panel" id="rpanel-shinys">
+                <div id="ranking-shinys"></div>
+            </div>
+        </section>
+
+        <!-- TAB: Información -->
+        <section class="league-tab-content" id="tab-info">
+            <!-- Info Sub-Tabs -->
+            <div class="info-tabs">
+                <button class="info-tab active" data-itab="gym-leaders" onclick="switchInfoTab('gym-leaders')">🏟️ Líderes de Gimnasio</button>
+                <button class="info-tab" data-itab="rules" onclick="switchInfoTab('rules')">📜 Reglas</button>
+            </div>
+
+            <!-- Líderes de Gimnasio Panel -->
+            <div class="info-panel active" id="ipanel-gym-leaders">
+                <div id="gym-leaders-content"></div>
+            </div>
+
+            <!-- Reglas Panel -->
+            <div class="info-panel" id="ipanel-rules">
+                <div class="rules-container">
+                    <div class="rules-title-row">
+                        <span class="rules-title-icon">📜</span>
+                        <h2 class="rules-title">Reglas del Nuzlocke</h2>
+                    </div>
+                    <ol class="rules-list">
+                        <li class="rule-item rule-death">
+                            <span class="rule-icon">💀</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Muerte permanente</span>
+                                Si se te muere un Pokémon, se muere para siempre.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-nickname">
+                            <span class="rule-icon">🏷️</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Mote obligatorio</span>
+                                Es obligatorio ponerle mote a los Pokémon. Un Pokémon sin mote no puede ser utilizado.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-level">
+                            <span class="rule-icon">📊</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Límite de nivel</span>
+                                No puedes subir a los Pokémon más del nivel del gimnasio que te toque. Los niveles están en <strong>Información → Líderes de Gimnasio</strong>.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-catch">
+                            <span class="rule-icon">🎣</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Primer Pokémon de ruta</span>
+                                Solo puedes capturar el primer Pokémon de cada ruta. Hasta tener la 1ª medalla, serán los 2 primeros Pokémon de la ruta.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-gift">
+                            <span class="rule-icon">🎁</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Pokémon extra</span>
+                                Los Pokémon de regalo, fósil o el Snorlax no cuentan como Pokémon de ruta, sino como Pokémon extra.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-items">
+                            <span class="rule-icon">🚫</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Sin objetos curativos</span>
+                                No se pueden comprar objetos curativos.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-mode">
+                            <span class="rule-icon">⚙️</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Modo Mantener</span>
+                                Es obligatorio poner el modo Mantener.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-candy">
+                            <span class="rule-icon">🍬</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Caramelos Raros</span>
+                                Se podrán vender 5 Caramelos Raros al inicio de la aventura.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">⛔</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Sin singulares ni legendarios</span>
+                                No se permiten ni singulares ni legendarios.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-cheat">
+                            <span class="rule-icon">🔨</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Trampas — expulsión inmediata</span>
+                                Cualquier caso de trampas será sancionado con la expulsión inmediata del jugador.
+                            </div>
+                        </li>
+                    </ol>
                 </div>
-                <div class="ranking-list" id="ranking-shinys"></div>
             </div>
         </section>
 
