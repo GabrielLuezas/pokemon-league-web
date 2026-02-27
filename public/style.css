@@ -1217,6 +1217,13 @@ header p {
     border: 1px solid rgba(255,71,87,0.3);
 }
 
+.points-badge.spent {
+    color: #ffd32a;
+    background: rgba(255,211,42,0.15);
+    border: 1px solid rgba(255,211,42,0.3);
+    font-size: 0.85rem;
+}
+
 .detail-points-breakdown {
     display: flex;
     flex-wrap: wrap;
@@ -1240,6 +1247,11 @@ header p {
 .detail-points-item.penalty {
     color: #ff4757;
     background: rgba(255,71,87,0.1);
+}
+
+.detail-points-item.spent {
+    color: #ffd32a;
+    background: rgba(255,211,42,0.08);
 }
 
 .detail-points-shiny {
@@ -1474,8 +1486,7 @@ header p {
     transition: opacity 0.3s ease;
 }
 .gym-leader-card:hover {
-    background: var(--bg-card-hover);
-    transform: translateY(-3px);
+    transform: translateY(-4px);
     box-shadow: var(--shadow-card), var(--shadow-glow);
 }
 .gym-leader-card:hover::before { opacity: 1; }
@@ -1617,6 +1628,7 @@ header p {
 .champion-level .gym-level-value { color: var(--accent-gold); }
 
 /* ================== RULES LIST ================== */
+
 .rules-container {
     max-width: 860px;
     margin: 0 auto;

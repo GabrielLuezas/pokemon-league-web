@@ -275,6 +275,10 @@ function renderActualContent(user) {
     const deathPenalty = stats.deaths * 50;
     const displayPoints = user.nuzlocke_points != null ? user.nuzlocke_points : stats.points;
     const displayEarned = user.nuzlocke_points_earned != null ? user.nuzlocke_points_earned : 0;
+    // Spent: use DB value if available, otherwise derive from: earned - penalty - total
+    const dbSpent = user.nuzlocke_points_spent || 0;
+    const derivedSpent = Math.max(0, displayEarned - deathPenalty - displayPoints);
+    const displaySpent = dbSpent > 0 ? dbSpent : derivedSpent;
     const displayPenalty = deathPenalty;
 
     const badgesHTML = KALOS_BADGES.map((badge, i) => {
@@ -333,9 +337,11 @@ function renderActualContent(user) {
             <div class="detail-points-badges">
                 <span class="points-badge earned">+${displayEarned}</span>
                 ${displayPenalty > 0 ? `<span class="points-badge penalty">-${displayPenalty}</span>` : ''}
+                ${displaySpent  > 0 ? `<span class="points-badge spent">-${displaySpent} gastados</span>` : ''}
             </div>
             <div class="detail-points-breakdown">
-                ${stats.deaths > 0 ? `<div class="detail-points-item penalty">💀 Muertes: ${stats.deaths} (-${deathPenalty} c/u)</div>` : ''}
+                ${stats.deaths > 0 ? `<div class="detail-points-item penalty">💀 Muertes: ${stats.deaths} (-50 c/u)</div>` : ''}
+                ${displaySpent > 0 ? `<div class="detail-points-item spent">🛒 Gastados en tienda: -${displaySpent}</div>` : ''}
             </div>
             ${stats.shinys > 0 ? `<div class="detail-points-shiny">✨ Shinys encontrados: ${stats.shinys}</div>` : ''}
         </section>
@@ -1021,7 +1027,7 @@ const GYM_LEADERS = [
     },
     {
         num: 2,
-        name: 'Corbin',
+        name: 'Lino',
         gym: 'Ciudad Relieve',
         level: 30,
         badge: '/badges/Medalla2.png',
@@ -1037,7 +1043,7 @@ const GYM_LEADERS = [
     },
     {
         num: 4,
-        name: 'Ramos',
+        name: 'Amaro',
         gym: 'Ciudad Témpera',
         level: 41,
         badge: '/badges/Medalla4.png',
@@ -1045,7 +1051,7 @@ const GYM_LEADERS = [
     },
     {
         num: 5,
-        name: 'Lumio',
+        name: 'Lem',
         gym: 'Ciudad Luminalia',
         level: 44,
         badge: '/badges/Medalla5.png',
@@ -1053,7 +1059,7 @@ const GYM_LEADERS = [
     },
     {
         num: 6,
-        name: 'Valerie',
+        name: 'Valeria',
         gym: 'Ciudad Romantis',
         level: 50,
         badge: '/badges/Medalla6.png',
@@ -1061,7 +1067,7 @@ const GYM_LEADERS = [
     },
     {
         num: 7,
-        name: 'Olimpia',
+        name: 'Tileo',
         gym: 'Ciudad Fluxus',
         level: 58,
         badge: '/badges/Medalla7.png',
@@ -1069,7 +1075,7 @@ const GYM_LEADERS = [
     },
     {
         num: 8,
-        name: 'Wulfric',
+        name: 'Édel',
         gym: 'Ciudad Fractal',
         level: 71,
         badge: '/badges/Medalla8.png',
@@ -1088,7 +1094,7 @@ const ELITE_FOUR = [
     },
     {
         num: 'C',
-        name: 'Diantha',
+        name: 'Dianta',
         gym: 'Campeona',
         icon: '🏆',
         level: 82,

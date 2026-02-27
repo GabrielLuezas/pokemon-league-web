@@ -28,6 +28,7 @@ async function initDB() {
                 trainer JSONB DEFAULT '{}',
                 nuzlocke_points INTEGER DEFAULT 0,
                 nuzlocke_points_earned INTEGER DEFAULT 0,
+                nuzlocke_points_spent INTEGER DEFAULT 0,
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         `);
@@ -45,6 +46,11 @@ async function initDB() {
         // Add nuzlocke_points_earned column if table already exists without it
         await client.query(`
             ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points_earned INTEGER DEFAULT 0;
+        `);
+
+        // Add nuzlocke_points_spent column if table already exists without it
+        await client.query(`
+            ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points_spent INTEGER DEFAULT 0;
         `);
 
         console.log('✅ Database tables initialized');
