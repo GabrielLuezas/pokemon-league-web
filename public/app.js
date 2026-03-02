@@ -26,11 +26,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('modal-overlay').addEventListener('click', (e) => {
         if (e.target === e.currentTarget) closeModal();
     });
+    document.getElementById('auth-modal-overlay').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeAuthModal();
+    });
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') { closeModal(); closeAuthModal(); }
     });
 
+    // Auth form handlers
+    document.getElementById('login-form').addEventListener('submit', handleLogin);
+    document.getElementById('register-form').addEventListener('submit', handleRegister);
+
+    // Restore auth state
+    restoreAuth();
+
     await loadTrainers();
+    renderGymLeaders();
+    renderPokemonList();
+    loadTournament();
 
     // Auto-refresh every 15 seconds
     setInterval(async () => {
@@ -1169,3 +1182,657 @@ function renderGymLeaders() {
 
     container.innerHTML = html;
 }
+
+// ===================== POKEMON PERMITIDOS / PROHIBIDOS =====================
+
+// ⚠️  EDITAR ESTAS LISTAS con los Pokémon reales cuando el organizador los facilite.
+// Formato: { id: <numero_pokedex>, name: '<nombre_español>' }
+
+const POKEMON_BANNED = [
+    // --- TITANES (BST > 600) ---
+    { id: 150, name: 'Mewtwo', bst: 680 },
+    { id: 249, name: 'Lugia', bst: 680 },
+    { id: 250, name: 'Ho-Oh', bst: 680 },
+    { id: 382, name: 'Kyogre', bst: 670 },
+    { id: 383, name: 'Groudon', bst: 670 },
+    { id: 384, name: 'Rayquaza', bst: 680 },
+    { id: 483, name: 'Dialga', bst: 680 },
+    { id: 484, name: 'Palkia', bst: 680 },
+    { id: 487, name: 'Giratina', bst: 680 },
+    { id: 493, name: 'Arceus', bst: 720 },
+    { id: 643, name: 'Reshiram', bst: 680 },
+    { id: 644, name: 'Zekrom', bst: 680 },
+    { id: 646, name: 'Kyurem', bst: 660 },
+    { id: 646, form: 'Black', name: 'Kyurem Negro', bst: 700 },
+    { id: 646, form: 'White', name: 'Kyurem Blanco', bst: 700 },
+    { id: 716, name: 'Xerneas', bst: 680 },
+    { id: 717, name: 'Yveltal', bst: 680 },
+
+    // --- CASOS ESPECIALES BANEADOS ---
+    { id: 289, name: 'Slaking', bst: 670, reason: 'BST de Legendario y sin Ausente' },
+    { id: 486, name: 'Regigigas', bst: 670, reason: 'BST de Legendario y sin Inicio Lento' }
+];
+const POKEMON_ALLOWED_SPECIAL = [
+
+    { id: 144, name: 'Articuno' }, { id: 145, name: 'Zapdos' }, { id: 146, name: 'Moltres' },
+    { id: 151, name: 'Mew' }, { id: 243, name: 'Raikou' }, { id: 244, name: 'Entei' },
+    { id: 245, name: 'Suicune' }, { id: 251, name: 'Celebi' }, { id: 377, name: 'Regirock' },
+    { id: 378, name: 'Regice' }, { id: 379, name: 'Registeel' }, { id: 380, name: 'Latias' },
+    { id: 381, name: 'Latios' }, { id: 385, name: 'Jirachi' }, { id: 386, name: 'Deoxys' },
+
+    // Gen 4-6
+    { id: 480, name: 'Uxie' }, { id: 481, name: 'Mesprit' }, { id: 482, name: 'Azelf' },
+    { id: 485, name: 'Heatran' }, { id: 488, name: 'Cresselia' }, { id: 490, name: 'Manaphy' },
+    { id: 491, name: 'Darkrai' }, { id: 492, name: 'Shaymin' }, { id: 494, name: 'Victini' },
+    { id: 638, name: 'Cobalion' }, { id: 639, name: 'Terrakion' }, { id: 640, name: 'Virizion' },
+    { id: 641, name: 'Tornadus' }, { id: 642, name: 'Thundurus' }, { id: 645, name: 'Landorus' },
+    { id: 647, name: 'Keldeo' }, { id: 648, name: 'Meloetta' }, { id: 649, name: 'Genesect' },
+    { id: 718, name: 'Zygarde' }, { id: 719, name: 'Diancie' }, { id: 720, name: 'Hoopa' },
+    { id: 721, name: 'Volcanion' },
+];
+
+function renderPokemonList() {
+    const container = document.getElementById('pokemon-list-content');
+    if (!container) return;
+
+    function buildSection(title, emoji, items, emptyMsg, cardClass) {
+        let html = `<div class="poke-list-section">`;
+        html += `<h3 class="poke-list-subtitle">${emoji} ${title}</h3>`;
+        if (items.length === 0) {
+            html += `<p class="poke-list-empty">${emptyMsg}</p>`;
+        } else {
+            html += `<div class="poke-list-grid">`;
+            items.forEach(p => {
+                const spriteUrl = `${SPRITE_BASE}${p.id}.png`;
+                html += `
+                    <div class="poke-list-card ${cardClass}">
+                        <img src="${spriteUrl}" alt="${escapeHtml(p.name)}" width="56" height="56"
+                             style="image-rendering:pixelated"
+                             onerror="this.src='${SPRITE_BASE}0.png'" />
+                        <div class="poke-list-name">${escapeHtml(p.name)}</div>
+                    </div>`;
+            });
+            html += `</div>`;
+        }
+        html += `</div>`;
+        return html;
+    }
+
+    let html = '';
+
+    if (POKEMON_BANNED.length === 0 && POKEMON_ALLOWED_SPECIAL.length === 0) {
+        html = `
+            <div class="poke-list-pending">
+                <span style="font-size:2.5rem">📋</span>
+                <p>La lista de Pokémon permitidos y prohibidos se publicará próximamente.</p>
+            </div>`;
+    } else {
+        html += buildSection(
+            'Pokémon Prohibidos', '⛔',
+            POKEMON_BANNED,
+            'No se han especificado Pokémon prohibidos aún.',
+            'banned'
+        );
+        html += buildSection(
+            'Pokémon Especiales Permitidos', '✅',
+            POKEMON_ALLOWED_SPECIAL,
+            'No se han especificado Pokémon especiales aún.',
+            'allowed'
+        );
+    }
+
+    container.innerHTML = html;
+}
+
+// ===================== AUTH SYSTEM =====================
+
+let authToken = null;
+let authUser = null;
+
+function showAuthModal() {
+    document.getElementById('auth-modal-overlay').classList.add('visible');
+}
+
+function closeAuthModal() {
+    document.getElementById('auth-modal-overlay').classList.remove('visible');
+    document.getElementById('login-error').textContent = '';
+    document.getElementById('register-error').textContent = '';
+}
+
+function switchAuthMode(mode) {
+    document.getElementById('login-form').style.display = mode === 'login' ? '' : 'none';
+    document.getElementById('register-form').style.display = mode === 'register' ? '' : 'none';
+    document.querySelectorAll('.auth-tab').forEach(t => {
+        t.classList.toggle('active', (mode === 'login' && t.textContent.includes('Entrar')) ||
+                                     (mode === 'register' && t.textContent.includes('Crear')));
+    });
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+    const errorEl = document.getElementById('login-error');
+    errorEl.textContent = '';
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) { errorEl.textContent = data.error || 'Error'; return; }
+
+        authToken = data.token;
+        authUser = data.user;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.user.username);
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('avatarUrl', data.user.avatar_url || '');
+        updateAuthUI();
+        closeAuthModal();
+        loadTournament();
+    } catch (err) {
+        errorEl.textContent = 'Error de conexión';
+    }
+}
+
+async function handleRegister(e) {
+    e.preventDefault();
+    const username = document.getElementById('register-user').value.trim();
+    const password = document.getElementById('register-pass').value;
+    const errorEl = document.getElementById('register-error');
+    errorEl.textContent = '';
+
+    try {
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) { errorEl.textContent = data.error || 'Error'; return; }
+
+        authToken = data.token;
+        authUser = data.user;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.user.username);
+        localStorage.setItem('userId', data.user.id);
+        localStorage.setItem('avatarUrl', data.user.avatar_url || '');
+        updateAuthUI();
+        closeAuthModal();
+        loadTournament();
+    } catch (err) {
+        errorEl.textContent = 'Error de conexión';
+    }
+}
+
+function logout() {
+    authToken = null;
+    authUser = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('avatarUrl');
+    updateAuthUI();
+}
+
+function restoreAuth() {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    const userId = localStorage.getItem('userId');
+    const avatarUrl = localStorage.getItem('avatarUrl');
+    if (token && username && userId) {
+        authToken = token;
+        authUser = { id: parseInt(userId), username, avatar_url: avatarUrl || null };
+    }
+    updateAuthUI();
+}
+
+function updateAuthUI() {
+    const authBtn = document.getElementById('auth-btn');
+    const profileEl = document.getElementById('user-profile');
+    const usernameEl = document.getElementById('user-username');
+    const avatarContainer = document.getElementById('user-avatar-container');
+    const battlesUnauth = document.getElementById('battles-unauth');
+    const battlesAuthTabs = document.getElementById('battles-auth-tabs');
+    const bracketPanel = document.getElementById('bpanel-bracket');
+    const adminPanel = document.getElementById('bracket-admin-panel');
+
+    if (authUser) {
+        authBtn.style.display = 'none';
+        profileEl.style.display = 'flex';
+        usernameEl.textContent = authUser.username;
+        const initial = authUser.username.charAt(0).toUpperCase();
+        avatarContainer.innerHTML = authUser.avatar_url
+            ? `<img src="${authUser.avatar_url}" class="avatar-circle-img" alt="${initial}" onerror="this.parentNode.textContent='${initial}'">`
+            : initial;
+        battlesUnauth.style.display = 'none';
+        battlesAuthTabs.style.display = '';
+        bracketPanel.style.display = '';
+        if (authUser.username.toLowerCase() === 'gabriellucifer22') {
+            adminPanel.style.display = '';
+        } else {
+            adminPanel.style.display = 'none';
+        }
+    } else {
+        authBtn.style.display = '';
+        profileEl.style.display = 'none';
+        battlesUnauth.style.display = '';
+        battlesAuthTabs.style.display = 'none';
+        bracketPanel.style.display = 'none';
+        document.getElementById('bpanel-mymatches').style.display = 'none';
+        adminPanel.style.display = 'none';
+    }
+}
+
+// ===================== BATTLES TAB =====================
+
+let activeBattlesTab = 'bracket';
+let tournamentState = null;
+
+function switchBattlesTab(tab) {
+    activeBattlesTab = tab;
+    document.querySelectorAll('.battles-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.btab === tab);
+    });
+    document.getElementById('bpanel-bracket').style.display = tab === 'bracket' ? '' : 'none';
+    document.getElementById('bpanel-mymatches').style.display = tab === 'mymatches' ? '' : 'none';
+
+    if (tab === 'mymatches') loadMyMatches();
+    if (tab === 'bracket') loadTournament();
+}
+
+// ===================== TOURNAMENT BRACKET =====================
+
+async function loadTournament() {
+    try {
+        const res = await fetch('/api/tournament');
+        tournamentState = await res.json();
+        renderFullBracket();
+    } catch (err) {
+        console.error('Error loading tournament:', err);
+    }
+}
+
+function renderFullBracket() {
+    if (!tournamentState || !tournamentState.status) {
+        document.getElementById('upper-rounds').innerHTML = '<p class="bracket-empty">No hay torneo activo. El admin debe generar uno.</p>';
+        document.getElementById('middle-rounds').innerHTML = '';
+        document.getElementById('lower-rounds').innerHTML = '';
+        document.getElementById('grand-final-content').innerHTML = '';
+        return;
+    }
+
+    renderBracketSection('upper', 'upper-rounds');
+    renderBracketSection('middle', 'middle-rounds');
+    renderBracketSection('lower', 'lower-rounds');
+    renderGrandFinal();
+}
+
+function renderGrandFinal() {
+    const container = document.getElementById('grand-final-content');
+    if (!container) return;
+
+    const semi = tournamentState.semifinals;
+    const gf = tournamentState.grandFinal;
+
+    let html = '<div class="gf-matches">';
+
+    if (semi) {
+        html += '<div class="gf-stage"><div class="gf-stage-label">⚔️ Semifinal</div>';
+        html += renderMatchCard(semi, 'semifinals');
+        html += '</div>';
+    }
+
+    if (gf) {
+        html += '<div class="gf-stage"><div class="gf-stage-label">👑 Gran Final</div>';
+        html += renderMatchCard(gf, 'grandFinal');
+        html += '</div>';
+    }
+
+    if (!semi && !gf) {
+        html += '<p class="bracket-empty">Las finales se desbloquearán cuando los brackets tengan campeones.</p>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function getRoundLabel(roundIndex, totalRounds) {
+    if (totalRounds <= 1) return 'Final';
+    if (roundIndex === totalRounds - 1) return 'Final';
+    if (roundIndex === totalRounds - 2) return 'Semifinales';
+    return `Ronda ${roundIndex + 1}`;
+}
+
+function renderBracketSection(bracketKey, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const bracket = tournamentState[bracketKey];
+    if (!bracket || !bracket.rounds || bracket.rounds.length === 0) {
+        container.innerHTML = '<p class="bracket-empty">Sin enfrentamientos</p>';
+        return;
+    }
+
+    const validRounds = bracket.rounds.filter(r => r && r.length > 0);
+    if (validRounds.length === 0) {
+        container.innerHTML = '<p class="bracket-empty">Sin enfrentamientos</p>';
+        return;
+    }
+
+    let html = '';
+    validRounds.forEach((round, rIdx) => {
+        const isLastRound = rIdx === validRounds.length - 1;
+        html += `<div class="tb-round${isLastRound ? ' tb-round-final' : ''}" data-round="${rIdx}">`;
+        html += `<div class="tb-round-header">${getRoundLabel(rIdx, validRounds.length)}</div>`;
+        html += `<div class="tb-round-matches">`;
+        round.forEach(match => {
+            html += renderMatchCard(match, bracketKey);
+        });
+        html += `</div></div>`;
+        // Add connector column between rounds (except after last)
+        if (!isLastRound) {
+            html += `<div class="tb-connector-col" data-round="${rIdx}" data-matches="${round.length}"></div>`;
+        }
+    });
+
+    container.innerHTML = html;
+
+    // Draw SVG connectors
+    requestAnimationFrame(() => drawConnectors(container));
+}
+
+function drawConnectors(container) {
+    // Remove existing SVG overlays
+    container.querySelectorAll('.tb-svg-overlay').forEach(s => s.remove());
+
+    const rounds = container.querySelectorAll('.tb-round');
+    if (rounds.length < 2) return;
+
+    // Create SVG overlay for the entire bracket
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('tb-svg-overlay');
+    svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;';
+    container.style.position = 'relative';
+    container.appendChild(svg);
+
+    const containerRect = container.getBoundingClientRect();
+
+    for (let r = 0; r < rounds.length - 1; r++) {
+        const currentMatches = rounds[r].querySelectorAll('.tb-match');
+        const nextMatches = rounds[r + 1].querySelectorAll('.tb-match');
+
+        for (let m = 0; m < currentMatches.length; m++) {
+            const sourceMatch = currentMatches[m];
+            const targetIdx = Math.floor(m / 2);
+            const targetMatch = nextMatches[targetIdx];
+            if (!targetMatch) continue;
+
+            const srcRect = sourceMatch.getBoundingClientRect();
+            const tgtRect = targetMatch.getBoundingClientRect();
+
+            const x1 = srcRect.right - containerRect.left;
+            const y1 = srcRect.top + srcRect.height / 2 - containerRect.top;
+            const x2 = tgtRect.left - containerRect.left;
+            const y2 = tgtRect.top + tgtRect.height / 2 - containerRect.top;
+            const midX = (x1 + x2) / 2;
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', `M${x1},${y1} H${midX} V${y2} H${x2}`);
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', 'rgba(120,130,180,0.35)');
+            path.setAttribute('stroke-width', '2');
+            svg.appendChild(path);
+        }
+    }
+}
+
+function renderMatchCard(match, bracketKey) {
+    const p1 = match.player1;
+    const p2 = match.player2;
+    const isAdmin = authUser && authUser.username.toLowerCase() === 'gabriellucifer22';
+
+    const p1Name = p1 ? escapeHtml(p1.username) : '—';
+    const p2Name = p2 ? escapeHtml(p2.username) : '—';
+
+    const isP1Winner = match.winnerId && p1 && match.winnerId === p1.id;
+    const isP2Winner = match.winnerId && p2 && match.winnerId === p2.id;
+    const isCompleted = match.status === 'completed';
+
+    let statusIcon = '';
+    if (match.status === 'conflict') statusIcon = '<span class="tb-status-icon conflict" title="Conflicto">⚠️</span>';
+    else if (match.status === 'waiting_opponent') statusIcon = '<span class="tb-status-icon waiting" title="Esperando">⏳</span>';
+
+    let adminHtml = '';
+    if (isAdmin && (match.status === 'conflict' || match.status === 'pending' || match.status === 'waiting_opponent') && p1 && p2) {
+        adminHtml = `
+            <div class="tb-admin">
+                <button class="tb-admin-btn" onclick="adminOverrideMatch('${match.id}', 2, 0)" title="Victoria ${p1Name}">👑 P1</button>
+                <button class="tb-admin-btn" onclick="adminOverrideMatch('${match.id}', 0, 2)" title="Victoria ${p2Name}">👑 P2</button>
+            </div>`;
+    }
+
+    return `
+        <div class="tb-match ${isCompleted ? 'tb-completed' : ''}" data-match-id="${match.id}">
+            <div class="tb-player ${isP1Winner ? 'tb-winner' : ''} ${!p1 ? 'tb-empty' : ''}">
+                ${p1 ? renderSmallAvatar(p1) : ''}
+                <span class="tb-player-name">${p1Name}</span>
+                <span class="tb-player-score">${isCompleted ? match.score.p1 : ''}</span>
+            </div>
+            <div class="tb-player ${isP2Winner ? 'tb-winner' : ''} ${!p2 ? 'tb-empty' : ''}">
+                ${p2 ? renderSmallAvatar(p2) : ''}
+                <span class="tb-player-name">${p2Name}</span>
+                <span class="tb-player-score">${isCompleted ? match.score.p2 : ''}</span>
+            </div>
+            ${statusIcon}
+            ${adminHtml}
+        </div>
+    `;
+}
+
+function renderSmallAvatar(player) {
+    const initial = player.username.charAt(0).toUpperCase();
+    if (player.avatar_url) {
+        return `<div class="match-avatar"><img src="${player.avatar_url}" class="avatar-circle-img" alt="${initial}" onerror="this.parentNode.textContent='${initial}'"></div>`;
+    }
+    return `<div class="match-avatar">${initial}</div>`;
+}
+
+// ===================== MY MATCHES =====================
+
+async function loadMyMatches() {
+    if (!authToken) return;
+
+    try {
+        const res = await fetch('/api/tournament/my-matches', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        renderCurrentMatch(data.current);
+        renderPastMatches(data.past);
+    } catch (err) {
+        console.error('Error loading my matches:', err);
+    }
+}
+
+function renderCurrentMatch(match) {
+    const container = document.getElementById('current-match-content');
+    if (!container) return;
+
+    if (!match) {
+        container.innerHTML = '<p class="no-match-msg">No tienes enfrentamiento activo en este momento.</p>';
+        return;
+    }
+
+    const userId = authUser.id;
+    const isP1 = match.player1 && match.player1.id === userId;
+    const opponent = isP1 ? match.player2 : match.player1;
+    const opponentName = opponent ? escapeHtml(opponent.username) : 'BYE';
+
+    const bracketLabels = { upper: '🏆 Winners Bracket', middle: '⚔️ Middle Bracket', lower: '💀 Lower Bracket', semifinals: '⚔️ Semifinal', grandFinal: '👑 Gran Final' };
+    const bracketLabel = bracketLabels[match.bracket] || match.bracket;
+
+    let statusHtml = '';
+    const myReport = match.reports ? match.reports[userId] : null;
+
+    if (myReport && match.status === 'waiting_opponent') {
+        statusHtml = '<div class="my-match-status waiting">⏳ Has reportado tu resultado. Esperando a tu rival...</div>';
+    } else if (match.status === 'conflict') {
+        statusHtml = '<div class="my-match-status conflict">⚠️ Conflicto en los resultados. El admin decidirá el ganador.</div>';
+    }
+
+    let reportHtml = '';
+
+    if (!myReport && (match.status === 'pending' || match.status === 'waiting_opponent' || match.status === 'conflict')) {
+        reportHtml = `
+            <div class="report-form">
+                <h4>📋 Reportar resultado (Bo3)</h4>
+                <p class="report-hint">Selecciona el resultado de tu serie:</p>
+                <div class="score-buttons">
+                    <button class="score-btn win" onclick="reportResult('${match.id}', 2, 0)">🏆 Gané 2 - 0</button>
+                    <button class="score-btn win" onclick="reportResult('${match.id}', 2, 1)">🏆 Gané 2 - 1</button>
+                    <button class="score-btn lose" onclick="reportResult('${match.id}', 1, 2)">💀 Perdí 1 - 2</button>
+                    <button class="score-btn lose" onclick="reportResult('${match.id}', 0, 2)">💀 Perdí 0 - 2</button>
+                </div>
+            </div>
+        `;
+    } else if (myReport) {
+        const myScore = isP1 ? myReport.p1 : myReport.p2;
+        const enScore = isP1 ? myReport.p2 : myReport.p1;
+        reportHtml = `<div class="my-report-sent">✅ Ya has reportado: <strong>${myScore} - ${enScore}</strong></div>`;
+    }
+
+    container.innerHTML = `
+        <div class="current-match-card">
+            <div class="current-match-bracket">${bracketLabel}</div>
+            <div class="current-match-vs">
+                <div class="current-match-player you">
+                    ${renderSmallAvatar(authUser)}
+                    <span>${escapeHtml(authUser.username)}</span>
+                    <span class="you-badge">TÚ</span>
+                </div>
+                <div class="current-match-separator">VS</div>
+                <div class="current-match-player opponent">
+                    ${opponent ? renderSmallAvatar(opponent) : ''}
+                    <span>${opponentName}</span>
+                </div>
+            </div>
+            ${statusHtml}
+            ${reportHtml}
+        </div>
+    `;
+}
+
+function renderPastMatches(matches) {
+    const container = document.getElementById('past-matches-content');
+    if (!container) return;
+
+    if (!matches || matches.length === 0) {
+        container.innerHTML = '<p class="no-match-msg">Sin enfrentamientos pasados.</p>';
+        return;
+    }
+
+    const userId = authUser.id;
+
+    let html = '';
+    matches.forEach(match => {
+        const isP1 = match.player1 && match.player1.id === userId;
+        const opponent = isP1 ? match.player2 : match.player1;
+        const opponentName = opponent ? escapeHtml(opponent.username) : 'BYE';
+        const won = match.winnerId === userId;
+        const myScore = isP1 ? match.score.p1 : match.score.p2;
+        const opScore = isP1 ? match.score.p2 : match.score.p1;
+        const bracketLabel = match.bracket === 'upper' ? 'Winners' : match.bracket === 'middle' ? 'Middle' : match.bracket === 'lower' ? 'Lower' : match.bracket === 'semifinals' ? 'Semifinal' : 'Gran Final';
+
+        html += `
+            <div class="past-match-row ${won ? 'past-win' : 'past-loss'}">
+                <span class="past-result-icon">${won ? '🏆' : '💀'}</span>
+                ${opponent ? renderSmallAvatar(opponent) : ''}
+                <span class="past-opponent">${opponentName}</span>
+                <span class="past-score">${myScore} - ${opScore}</span>
+                <span class="past-bracket">${bracketLabel}</span>
+                ${match.adminOverride ? '<span class="past-admin">👑 Admin</span>' : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+// ===================== REPORT & ADMIN ACTIONS =====================
+
+async function reportResult(matchId, myScore, enemyScore) {
+    if (!authToken) return;
+
+    try {
+        const res = await fetch('/api/tournament/report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ matchId, myScore, enemyScore })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error al reportar');
+            return;
+        }
+        loadMyMatches();
+        loadTournament();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+async function adminGenerateTournament() {
+    if (!authToken) return;
+    if (!confirm('¿Generar un nuevo torneo? Esto reemplazará el torneo actual.')) return;
+
+    try {
+        const res = await fetch('/api/tournament/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error');
+            return;
+        }
+        loadTournament();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+async function adminOverrideMatch(matchId, p1Wins, p2Wins) {
+    if (!authToken) return;
+    if (!confirm(`¿Forzar resultado ${p1Wins} - ${p2Wins}?`)) return;
+
+    try {
+        const res = await fetch('/api/tournament/admin/override', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ matchId, p1Wins, p2Wins })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error');
+            return;
+        }
+        loadTournament();
+        loadMyMatches();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+

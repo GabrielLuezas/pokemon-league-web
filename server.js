@@ -6,6 +6,7 @@ const pool = require('./db');
 const initDB = require('./db/init');
 const authMiddleware = require('./middleware/auth');
 const authRoutes = require('./routes/auth');
+const tournamentRoutes = require('./routes/tournament');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -17,6 +18,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// Tournament routes
+app.use('/api/tournament', tournamentRoutes);
 
 // ===================== SYNC ENDPOINT =====================
 // Desktop app sends parsed save data here on every file change

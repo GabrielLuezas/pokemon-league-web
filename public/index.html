@@ -16,8 +16,20 @@
     </div>
 
     <header>
-        <h1>🏆 Pokémon League</h1>
-        <p>Dashboard de entrenadores — Pokémon X</p>
+        <div class="header-content">
+            <div class="header-titles">
+                <h1>🏆 Pokémon League</h1>
+                <p>Dashboard de entrenadores — Pokémon X</p>
+            </div>
+            <div class="header-actions">
+                <button id="auth-btn" class="auth-btn" onclick="showAuthModal()">👤 Iniciar Sesión</button>
+                <div id="user-profile" class="user-profile" style="display: none;">
+                    <div id="user-avatar-container" class="header-avatar-circle"></div>
+                    <span id="user-username"></span>
+                    <button class="auth-btn logout-btn" onclick="logout()">Salir</button>
+                </div>
+            </div>
+        </div>
     </header>
 
     <!-- Main Tabs -->
@@ -89,6 +101,7 @@
             <div class="info-tabs">
                 <button class="info-tab active" data-itab="gym-leaders" onclick="switchInfoTab('gym-leaders')">🏟️ Líderes de Gimnasio</button>
                 <button class="info-tab" data-itab="rules" onclick="switchInfoTab('rules')">📜 Reglas</button>
+                <button class="info-tab" data-itab="pokemon-list" onclick="switchInfoTab('pokemon-list')">📋 Pokémon Permitidos</button>
             </div>
 
             <!-- Líderes de Gimnasio Panel -->
@@ -122,13 +135,20 @@
                             <span class="rule-icon">📊</span>
                             <div class="rule-text">
                                 <span class="rule-label">Límite de nivel</span>
-                                No puedes subir a los Pokémon más del nivel del gimnasio que te toque. Los niveles están en <strong>Información → Líderes de Gimnasio</strong>                            </div>
+                                No puedes subir a los Pokémon más del nivel del gimnasio que te toque. Los niveles están en <strong onclick="switchInfoTab('gym-leaders')" style="cursor:pointer;color:var(--accent,#7c3aed);text-decoration:underline;">Información → Nivel de Pokémon</strong>                          </div>
                         </li>
                         <li class="rule-item rule-catch">
                             <span class="rule-icon">🎣</span>
                             <div class="rule-text">
                                 <span class="rule-label">Primer Pokémon de ruta</span>
                                 Solo puedes capturar el primer Pokémon de cada ruta. Hasta tener 2 medallas, serán los 2 primeros Pokémon de la ruta.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-catch">
+                            <span class="rule-icon">💎</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Megaevolucionados en ruta</span>
+                                Si el primer Pokémon de ruta es un Pokémon que puede megaevolucionar, no cuenta y deberás ir a por el siguiente que te salga.
                             </div>
                         </li>
                         <li class="rule-item rule-gift">
@@ -162,8 +182,36 @@
                         <li class="rule-item rule-legendary">
                             <span class="rule-icon">⛔</span>
                             <div class="rule-text">
-                                <span class="rule-label">Sin singulares ni legendarios</span>
-                                No se permiten ni singulares ni legendarios.
+                                <span class="rule-label">Pokémon permitidos</span>
+                                Hay Pokémon que no están permitidos. Puedes ver la lista completa en la pestaña <strong onclick="switchInfoTab('pokemon-list')" style="cursor:pointer;color:var(--accent,#7c3aed);text-decoration:underline;">📋 Pokémon Permitidos</strong>
+                            </div>
+                        </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">😴</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Sleep Clause</span>
+                                En los combates entre jugadores se aplica Sleep Clause: no puedes dormir a más de un Pokémon del rival a la vez.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">⚔️</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Formato Dobles</span>
+                                El formato de los combates entre jugadores es Dobles (2 vs 2).
+                            </div>
+                        </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">📋</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Open Teamsheets</span>
+                                Habrá Open Teamsheets: antes del combate se comparten los equipos entre ambos jugadores.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">🎒</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Item Clause</span>
+                                Solo se puede llevar 1 copia de cada objeto en el equipo. Por ejemplo, no se pueden llevar 2 Pokémon con Restos.
                             </div>
                         </li>
                         <li class="rule-item rule-legendary">
@@ -183,15 +231,81 @@
                     </ol>
                 </div>
             </div>
+
+            <!-- Pokémon Permitidos Panel -->
+            <div class="info-panel" id="ipanel-pokemon-list">
+                <div class="rules-container">
+                    <div class="rules-title-row">
+                        <span class="rules-title-icon">📋</span>
+                        <h2 class="rules-title">Pokémon Permitidos y Prohibidos</h2>
+                    </div>
+                    <div id="pokemon-list-content">
+                        <!-- Contenido generado dinámicamente desde app.js -->
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- TAB: Combates -->
         <section class="league-tab-content" id="tab-battles">
-            <div class="wip-panel">
-                <div class="wip-icon">🚧</div>
-                <h2>Combates — En Proceso</h2>
-                <p>Esta sección estará disponible próximamente.</p>
-                <p style="font-size:0.85rem;color:var(--text-muted);margin-top:8px;">Aquí podrás ver duelos y resultados entre entrenadores.</p>
+            <!-- Battles Sub-Tabs -->
+            <div class="battles-tabs" id="battles-auth-tabs" style="display:none">
+                <button class="battles-tab active" data-btab="bracket" onclick="switchBattlesTab('bracket')">🏆 Torneo Completo</button>
+                <button class="battles-tab" data-btab="mymatches" onclick="switchBattlesTab('mymatches')">⚔️ Mis Enfrentamientos</button>
+            </div>
+            
+            <div id="battles-unauth" class="wip-panel">
+                <div class="wip-icon">👤</div>
+                <h2>Inicia sesión para ver el Torneo</h2>
+                <p>Participa en el Triple Bracket reportando tus combates.</p>
+                <button class="auth-btn" onclick="showAuthModal()" style="margin-top: 16px;">Iniciar Sesión</button>
+            </div>
+
+            <!-- Torneo Completo Panel -->
+            <div class="battles-panel active" id="bpanel-bracket" style="display:none">
+                <div class="bracket-admin-panel" id="bracket-admin-panel" style="display: none; text-align: right; margin-bottom: 16px;">
+                    <button class="auth-btn" style="background:var(--accent-gold);color:#000;" onclick="adminGenerateTournament()">⚙️ Admin: Generar Torneo</button>
+                </div>
+                
+                <div class="bracket-viewer">
+                    <!-- Winners Bracket -->
+                    <div class="bracket-section" id="upper-bracket">
+                        <h3>🏆 Winners Bracket</h3>
+                        <div class="bracket-rounds" id="upper-rounds"></div>
+                    </div>
+                    <!-- Middle Bracket -->
+                    <div class="bracket-section" id="middle-bracket">
+                        <h3>⚔️ Middle Bracket</h3>
+                        <div class="bracket-rounds" id="middle-rounds"></div>
+                    </div>
+                    <!-- Lower Bracket -->
+                    <div class="bracket-section" id="lower-bracket">
+                        <h3>💀 Lower Bracket</h3>
+                        <div class="bracket-rounds" id="lower-rounds"></div>
+                    </div>
+                    <!-- Semifinals & Grand Final -->
+                    <div class="bracket-section bracket-grand-final" id="grand-final-section">
+                        <h3>👑 Finales</h3>
+                        <div id="grand-final-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mis Enfrentamientos Panel -->
+            <div class="battles-panel" id="bpanel-mymatches" style="display:none">
+                <div class="my-matches-container">
+                    <!-- Actual Match -->
+                    <div class="current-match-section" id="current-match-section">
+                        <h3>⚔️ Enfrentamiento Actual</h3>
+                        <div id="current-match-content"></div>
+                    </div>
+                    
+                    <!-- Past Matches -->
+                    <div class="past-matches-section" id="past-matches-section">
+                        <h3>📜 Historial</h3>
+                        <div id="past-matches-content"></div>
+                    </div>
+                </div>
             </div>
         </section>
     </div>
@@ -199,6 +313,35 @@
     <!-- Detail Modal -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal-content" id="modal-content"></div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="auth-modal-overlay">
+        <div class="auth-modal-content">
+            <button class="modal-close" onclick="closeAuthModal()">✕</button>
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="switchAuthMode('login')">Entrar</button>
+                <button class="auth-tab" onclick="switchAuthMode('register')">Crear Cuenta</button>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form">
+                <h2>Iniciar Sesión</h2>
+                <input type="text" id="login-user" placeholder="Usuario" required autocomplete="username">
+                <input type="password" id="login-pass" placeholder="Contraseña" required autocomplete="current-password">
+                <p id="login-error" class="error-msg"></p>
+                <button type="submit" class="auth-submit">Entrar</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" style="display:none">
+                <h2>Crear Cuenta</h2>
+                <input type="text" id="register-user" placeholder="Usuario" required autocomplete="username">
+                <input type="password" id="register-pass" placeholder="Contraseña" required autocomplete="new-password">
+                <p id="register-error" class="error-msg"></p>
+                <button type="submit" class="auth-submit">Registrarse</button>
+            </form>
+        </div>
     </div>
 
     <script src="app.js"></script>

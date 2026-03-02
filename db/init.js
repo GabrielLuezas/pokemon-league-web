@@ -53,6 +53,21 @@ async function initDB() {
             ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points_spent INTEGER DEFAULT 0;
         `);
 
+        // Add tournament table for the Triple Elimination Bracket
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS tournament (
+                id SERIAL PRIMARY KEY,
+                state JSONB DEFAULT '{}',
+                updated_at TIMESTAMP DEFAULT NOW()
+            );
+        `);
+
+        // Initialize with empty state if it doesn't exist
+        const tournamentCheck = await client.query('SELECT id FROM tournament LIMIT 1');
+        if (tournamentCheck.rows.length === 0) {
+            await client.query(`INSERT INTO tournament (state) VALUES ('{}')`);
+        }
+
         console.log('✅ Database tables initialized');
     } catch (err) {
         console.error('❌ Error initializing database:', err);
