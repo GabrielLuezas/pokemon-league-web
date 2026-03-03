@@ -26,6 +26,7 @@
                 <div id="user-profile" class="user-profile" style="display: none;">
                     <div id="user-avatar-container" class="header-avatar-circle"></div>
                     <span id="user-username"></span>
+                    <button class="auth-btn settings-btn" onclick="showProfileModal()" title="Configuración">⚙️</button>
                     <button class="auth-btn logout-btn" onclick="logout()">Salir</button>
                 </div>
             </div>
@@ -221,6 +222,20 @@
                                 Las hordas no cuentan como Pokémon de ruta, en caso de que te salga una horda como primer Pokémon de ruta escapas y puedes capturar el siguiente Pokémon que te salga. (Si sale un shiny si se puede capturar)
                             </div>
                         </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">📀</span>
+                            <div class="rule-text">
+                                <span class="rule-label">MT Esquema prohibida</span>
+                                Si te sale la MT Esquema (Sketch), no puedes usarla.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-legendary">
+                            <span class="rule-icon">🎯</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Indefenso + OHKO prohibido</span>
+                                Si tienes un Pokémon con la habilidad Indefenso (No Guard), no puedes enseñarle movimientos de KO en un golpe (Fisura, Frío Polar).
+                            </div>
+                        </li>
                         <li class="rule-item rule-cheat">
                             <span class="rule-icon">🔨</span>
                             <div class="rule-text">
@@ -341,6 +356,51 @@
                 <p id="register-error" class="error-msg"></p>
                 <button type="submit" class="auth-submit">Registrarse</button>
             </form>
+        </div>
+    </div>
+
+    <!-- Profile Settings Modal -->
+    <div class="modal-overlay" id="profile-modal-overlay">
+        <div class="auth-modal-content profile-modal">
+            <button class="modal-close" onclick="closeProfileModal()">✕</button>
+            <h2 style="text-align:center;margin-bottom:20px;">⚙️ Configuración de Perfil</h2>
+
+            <!-- Avatar Section -->
+            <div class="profile-section">
+                <h3 class="profile-section-title">📷 Imagen de perfil</h3>
+                <div class="profile-avatar-row">
+                    <div class="profile-avatar-preview" id="profile-avatar-preview"></div>
+                    <div class="profile-avatar-actions">
+                        <input type="file" id="profile-avatar-file" accept="image/*" style="display:none" onchange="previewProfileAvatar(this)">
+                        <button class="profile-btn" onclick="document.getElementById('profile-avatar-file').click()">Elegir imagen</button>
+                        <button class="profile-btn profile-btn-danger" onclick="removeProfileAvatar()">Quitar</button>
+                    </div>
+                </div>
+                <button class="profile-btn profile-btn-save" id="profile-save-avatar" onclick="saveProfileAvatar()">Guardar avatar</button>
+                <p class="profile-msg" id="profile-avatar-msg"></p>
+            </div>
+
+            <hr class="profile-divider">
+
+            <!-- Username Section -->
+            <div class="profile-section">
+                <h3 class="profile-section-title">✏️ Cambiar nombre de usuario</h3>
+                <input type="text" id="profile-new-username" placeholder="Nuevo nombre" class="profile-input" autocomplete="off">
+                <input type="password" id="profile-username-pass" placeholder="Contraseña actual" class="profile-input" autocomplete="current-password">
+                <button class="profile-btn profile-btn-save" onclick="saveProfileUsername()">Cambiar nombre</button>
+                <p class="profile-msg" id="profile-username-msg"></p>
+            </div>
+
+            <hr class="profile-divider">
+
+            <!-- Password Section -->
+            <div class="profile-section">
+                <h3 class="profile-section-title">🔒 Cambiar contraseña</h3>
+                <input type="password" id="profile-current-pass" placeholder="Contraseña actual" class="profile-input" autocomplete="current-password">
+                <input type="password" id="profile-new-pass" placeholder="Nueva contraseña" class="profile-input" autocomplete="new-password">
+                <button class="profile-btn profile-btn-save" onclick="saveProfilePassword()">Cambiar contraseña</button>
+                <p class="profile-msg" id="profile-password-msg"></p>
+            </div>
         </div>
     </div>
 

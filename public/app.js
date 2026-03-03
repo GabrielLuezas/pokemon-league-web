@@ -681,7 +681,7 @@ const KALOS_LOCATIONS = {
     24: 'Torre Prisma', 26: 'Laboratorios Lysson',
     28: 'Ruta 5', 29: 'Vía Repecho', 30: 'Pueblo Vánitas',
     32: 'Castillo Caduco', 34: 'Ruta 6', 35: 'Alameda del Palacio',
-    36: 'Palacio Cénit', 38: 'Ruta 7', 39: 'Paseo de la Ribera',
+    36: 'Gacha', 38: 'Ruta 7', 39: 'Paseo de la Ribera',
     40: 'Ciudad Relieve', 42: 'Ruta 8', 43: 'Muralla Costera',
     44: 'Pueblo Petroglifo', 46: 'Ruta 9', 47: 'Paso de Rhyhorn',
     48: 'Bastión Batalla', 50: 'Ruta 10', 51: 'Camino Menhires',
@@ -726,6 +726,7 @@ const LOCATION_DISPLAY = {
     82: { name: '❄️ Gruta Helada', sub: 'Frost Cavern' },
     106: { name: '🏆 Liga Pokémon', sub: 'Pokémon League' },
     112: { name: '🌊 Bahía Azul', sub: 'Azure Bay' },
+    36: { name: '🎰 Gacha', sub: 'Pokémon obtenido por gacha' },
     132: { name: '💎 Cueva Brillante', sub: 'Glittering Cave' },
     136: { name: '⚡ Central de Kalos', sub: 'Power Plant' },
     138: { name: '🔥 Guarida Team Flare', sub: 'Team Flare HQ' },
@@ -1424,6 +1425,178 @@ function updateAuthUI() {
         bracketPanel.style.display = 'none';
         document.getElementById('bpanel-mymatches').style.display = 'none';
         adminPanel.style.display = 'none';
+    }
+}
+
+// ===================== PROFILE SETTINGS =====================
+
+let _pendingAvatarDataUrl = null;
+
+function showProfileModal() {
+    if (!authUser) return;
+    const overlay = document.getElementById('profile-modal-overlay');
+    overlay.classList.add('visible');
+
+    // Populate avatar preview
+    const preview = document.getElementById('profile-avatar-preview');
+    const initial = authUser.username.charAt(0).toUpperCase();
+    if (authUser.avatar_url) {
+        preview.innerHTML = `<img src="${authUser.avatar_url}" class="avatar-circle-img" alt="${initial}">`;
+    } else {
+        preview.innerHTML = `<span class="profile-avatar-initial">${initial}</span>`;
+    }
+    _pendingAvatarDataUrl = authUser.avatar_url || null;
+
+    // Pre-fill username
+    document.getElementById('profile-new-username').value = authUser.username;
+    document.getElementById('profile-username-pass').value = '';
+    document.getElementById('profile-current-pass').value = '';
+    document.getElementById('profile-new-pass').value = '';
+
+    // Clear messages
+    document.querySelectorAll('.profile-msg').forEach(el => { el.textContent = ''; el.className = 'profile-msg'; });
+}
+
+function closeProfileModal() {
+    document.getElementById('profile-modal-overlay').classList.remove('visible');
+}
+
+function previewProfileAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        // Resize to max 128x128 to keep data URL small
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxSize = 128;
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+                const ratio = Math.min(maxSize / w, maxSize / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/png');
+            _pendingAvatarDataUrl = dataUrl;
+            const preview = document.getElementById('profile-avatar-preview');
+            preview.innerHTML = `<img src="${dataUrl}" class="avatar-circle-img" alt="avatar">`;
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+function removeProfileAvatar() {
+    _pendingAvatarDataUrl = null;
+    const preview = document.getElementById('profile-avatar-preview');
+    const initial = authUser ? authUser.username.charAt(0).toUpperCase() : '?';
+    preview.innerHTML = `<span class="profile-avatar-initial">${initial}</span>`;
+}
+
+async function saveProfileAvatar() {
+    const msgEl = document.getElementById('profile-avatar-msg');
+    msgEl.textContent = 'Guardando...';
+    msgEl.className = 'profile-msg';
+
+    try {
+        const res = await fetch('/api/auth/avatar', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ avatarUrl: _pendingAvatarDataUrl })
+        });
+        const data = await res.json();
+        if (!res.ok) { msgEl.textContent = data.error || 'Error'; msgEl.className = 'profile-msg error'; return; }
+
+        authUser.avatar_url = _pendingAvatarDataUrl;
+        localStorage.setItem('avatarUrl', _pendingAvatarDataUrl || '');
+        try { updateAuthUI(); } catch(e) { console.warn('UI update error:', e); }
+        msgEl.textContent = '✅ Avatar actualizado';
+        msgEl.className = 'profile-msg success';
+        try { loadData(); } catch(e) {}
+    } catch (err) {
+        msgEl.textContent = 'Error de conexión';
+        msgEl.className = 'profile-msg error';
+    }
+}
+
+async function saveProfileUsername() {
+    const msgEl = document.getElementById('profile-username-msg');
+    const newUsername = document.getElementById('profile-new-username').value.trim();
+    const password = document.getElementById('profile-username-pass').value;
+    msgEl.textContent = '';
+    msgEl.className = 'profile-msg';
+
+    if (!newUsername || !password) {
+        msgEl.textContent = 'Rellena ambos campos';
+        msgEl.className = 'profile-msg error';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/username', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ newUsername, password })
+        });
+        const data = await res.json();
+        if (!res.ok) { msgEl.textContent = data.error || 'Error'; msgEl.className = 'profile-msg error'; return; }
+
+        authToken = data.token;
+        authUser.username = data.username;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('username', data.username);
+        try { updateAuthUI(); } catch(e) { console.warn('UI update error:', e); }
+        document.getElementById('profile-username-pass').value = '';
+        msgEl.textContent = '✅ Nombre actualizado';
+        msgEl.className = 'profile-msg success';
+        try { loadData(); } catch(e) {}
+    } catch (err) {
+        msgEl.textContent = 'Error de conexión';
+        msgEl.className = 'profile-msg error';
+    }
+}
+
+async function saveProfilePassword() {
+    const msgEl = document.getElementById('profile-password-msg');
+    const currentPassword = document.getElementById('profile-current-pass').value;
+    const newPassword = document.getElementById('profile-new-pass').value;
+    msgEl.textContent = '';
+    msgEl.className = 'profile-msg';
+
+    if (!currentPassword || !newPassword) {
+        msgEl.textContent = 'Rellena ambos campos';
+        msgEl.className = 'profile-msg error';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/password', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) { msgEl.textContent = data.error || 'Error'; msgEl.className = 'profile-msg error'; return; }
+
+        document.getElementById('profile-current-pass').value = '';
+        document.getElementById('profile-new-pass').value = '';
+        msgEl.textContent = '✅ Contraseña actualizada';
+        msgEl.className = 'profile-msg success';
+    } catch (err) {
+        msgEl.textContent = 'Error de conexión';
+        msgEl.className = 'profile-msg error';
     }
 }
 

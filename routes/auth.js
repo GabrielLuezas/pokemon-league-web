@@ -126,4 +126,68 @@ router.put('/avatar', authMiddleware, async (req, res) => {
     }
 });
 
+// PUT /api/auth/username
+router.put('/username', authMiddleware, async (req, res) => {
+    try {
+        const { newUsername, password } = req.body;
+        if (!newUsername || !password) {
+            return res.status(400).json({ error: 'Nuevo nombre y contraseña son obligatorios' });
+        }
+        if (newUsername.length < 3 || newUsername.length > 50) {
+            return res.status(400).json({ error: 'El nombre debe tener entre 3 y 50 caracteres' });
+        }
+
+        // Verify current password
+        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const valid = await bcrypt.compare(password, userResult.rows[0].password);
+        if (!valid) return res.status(401).json({ error: 'Contraseña incorrecta' });
+
+        // Check uniqueness
+        const existing = await pool.query('SELECT id FROM users WHERE username = $1 AND id != $2', [newUsername, req.userId]);
+        if (existing.rows.length > 0) return res.status(409).json({ error: 'Ese nombre ya está en uso' });
+
+        await pool.query('UPDATE users SET username = $1 WHERE id = $2', [newUsername, req.userId]);
+
+        // Issue new token with updated username
+        const token = jwt.sign(
+            { userId: req.userId, username: newUsername },
+            process.env.JWT_SECRET,
+            { expiresIn: '30d' }
+        );
+
+        res.json({ success: true, username: newUsername, token });
+    } catch (err) {
+        console.error('Username update error:', err);
+        res.status(500).json({ error: 'Error al cambiar nombre' });
+    }
+});
+
+// PUT /api/auth/password
+router.put('/password', authMiddleware, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Ambas contraseñas son obligatorias' });
+        }
+        if (newPassword.length < 4) {
+            return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 4 caracteres' });
+        }
+
+        // Verify current password
+        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+        if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+        const valid = await bcrypt.compare(currentPassword, userResult.rows[0].password);
+        if (!valid) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
+
+        const hashed = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hashed, req.userId]);
+
+        res.json({ success: true, message: 'Contraseña actualizada' });
+    } catch (err) {
+        console.error('Password update error:', err);
+        res.status(500).json({ error: 'Error al cambiar contraseña' });
+    }
+});
+
 module.exports = router;
