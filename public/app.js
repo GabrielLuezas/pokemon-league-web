@@ -60,6 +60,17 @@ async function loadTrainers() {
         const res = await fetch('/api/users');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         allUsers = await res.json();
+
+        // Sync logged-in user's avatar from DB (in case it was changed elsewhere)
+        if (authUser) {
+            const me = allUsers.find(u => u.id === authUser.id);
+            if (me && me.avatar_url !== authUser.avatar_url) {
+                authUser.avatar_url = me.avatar_url;
+                localStorage.setItem('avatarUrl', me.avatar_url || '');
+                updateAuthUI();
+            }
+        }
+
         renderTrainers();
         renderRankings();
         renderRoutes();
@@ -84,6 +95,13 @@ async function refreshCurrentTrainer() {
             const data = await res.json();
             currentTrainer = data;
             renderTrainerDetail(data);
+
+            // Sync logged-in user's avatar from DB if this is the current user
+            if (authUser && data.id === authUser.id && data.avatar_url !== authUser.avatar_url) {
+                authUser.avatar_url = data.avatar_url;
+                localStorage.setItem('avatarUrl', data.avatar_url || '');
+                updateAuthUI();
+            }
         }
     } catch (err) {
         console.error('Error refreshing trainer:', err);

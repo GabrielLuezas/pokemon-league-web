@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pokémon League — Dashboard</title>
-    <meta name="description" content="Dashboard público de todos los entrenadores de la Pokémon League" />
+    <title>Espectral Pokémon League</title>
+    <meta name="description" content="Dashboard público de todos los entrenadores de la Espectral Pokémon League" />
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>" />
 </head>
@@ -18,8 +18,8 @@
     <header>
         <div class="header-content">
             <div class="header-titles">
-                <h1>🏆 Pokémon League</h1>
-                <p>Dashboard de entrenadores — Pokémon X</p>
+                <h1>🏆 Espectral Pokémon League</h1>
+                <p>Listado de entreadores</p>
             </div>
             <div class="header-actions">
                 <button id="auth-btn" class="auth-btn" onclick="showAuthModal()">👤 Iniciar Sesión</button>
@@ -149,7 +149,7 @@
                             <span class="rule-icon">💎</span>
                             <div class="rule-text">
                                 <span class="rule-label">Megaevolucionados en ruta</span>
-                                Si el primer Pokémon de ruta es un Pokémon que puede megaevolucionar, no cuenta y deberás ir a por el siguiente que te salga.
+                                Si el primer Pokémon de ruta es un Pokémon megaevolucionado, no cuenta y deberás ir a por el siguiente que te salga.
                             </div>
                         </li>
                         <li class="rule-item rule-gift">
@@ -236,9 +236,30 @@
                                 Si tienes un Pokémon con la habilidad Indefenso (No Guard), no puedes enseñarle movimientos de KO en un golpe (Fisura, Frío Polar).
                             </div>
                         </li>
+                        <li class="rule-item rule-death">
+                            <span class="rule-icon">🖥️</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Registro manual de muertes</span>
+                                En caso de wipeo (todo el equipo derrotado) o si curas un Pokémon antes de guardar, debes ir a la aplicación de escritorio → pestaña Actual. Cada Pokémon tiene un botón 💀 para registrar la muerte manualmente.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-items">
+                            <span class="rule-icon">🎒</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Sin objetos duplicados en combate</span>
+                                En los combates Pokémon no se pueden llevar 2 Pokémon con el mismo objeto. Por ejemplo, no puedes llevar 2 Pokémon con Restos o 2 con Chaleco Asalto.
+                            </div>
+                        </li>
+                        <li class="rule-item rule-items">
+                            <span class="rule-icon">✨</span>
+                            <div class="rule-text">
+                                <span class="rule-label">Shinys</span>
+                                Si te sale un shiny, puedes capturarlo y cuenta como pokemon extra en la ruta. (En caso de que sea el primero de la ruta, lo captures y vas a por otro adicional)
+                            </div>
+                        </li>
                         <li class="rule-item rule-cheat">
                             <span class="rule-icon">🔨</span>
-                            <div class="rule-text">
+                            <div class="rule-text"> 
                                 <span class="rule-label">Trampas — expulsión inmediata</span>
                                 Cualquier caso de trampas será sancionado con la expulsión inmediata del jugador.
                             </div>
