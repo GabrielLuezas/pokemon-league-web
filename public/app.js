@@ -178,7 +178,48 @@ function viewTrainer(user) {
     currentBox = 0;
     document.getElementById('trainers-section').style.display = 'none';
     document.getElementById('detail-section').style.display = 'block';
+    // Render immediately with whatever data we have (no boxes yet from /api/users)
     renderTrainerDetail(user);
+    // Then fetch full data with boxes and update only the box section
+    fetchTrainerWithBoxes(user.id);
+}
+
+async function fetchTrainerWithBoxes(userId) {
+    // Show loading spinner in box section
+    const boxGrid = document.getElementById('detail-box-grid');
+    const boxTabs = document.getElementById('detail-box-tabs');
+    if (boxTabs) boxTabs.innerHTML = '';
+    if (boxGrid) {
+        boxGrid.innerHTML = `
+            <div class="box-loading">
+                <div class="box-loading-pokeball">
+                    <div class="pokeball-top"></div>
+                    <div class="pokeball-middle"></div>
+                    <div class="pokeball-bottom"></div>
+                    <div class="pokeball-center"></div>
+                </div>
+                <div class="box-loading-text">Cargando cajas del PC...</div>
+            </div>
+        `;
+    }
+    try {
+        const res = await fetch(`/api/users/${userId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const fullData = await res.json();
+        currentTrainer = fullData;
+        // Only update the box section (don't re-render the whole detail)
+        const boxes = fullData.boxes || [];
+        renderDetailBoxTabs(boxes);
+        renderDetailBox(0, boxes);
+        const totalEl = document.getElementById('detail-box-total');
+        const totalPokemon = boxes.reduce((s, b) => s + (b.slots || []).filter(Boolean).length, 0);
+        if (totalEl) totalEl.textContent = `${totalPokemon} Pokémon`;
+    } catch (err) {
+        if (boxGrid) {
+            boxGrid.innerHTML = `<div class="no-data-msg" style="grid-column:1/-1"><span class="icon">⚠️</span><p>Error cargando cajas</p></div>`;
+        }
+        console.error('Error fetching boxes:', err);
+    }
 }
 
 function showTrainerList() {
