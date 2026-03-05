@@ -1,430 +1,747 @@
 <!doctype html>
 <html lang="es">
-<head>
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Espectral Pokémon League</title>
-    <meta name="description" content="Dashboard público de todos los entrenadores de la Espectral Pokémon League" />
+    <meta
+      name="description"
+      content="Dashboard público de todos los entrenadores de la Espectral Pokémon League"
+    />
     <link rel="stylesheet" href="style.css" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>" />
-</head>
-<body>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>"
+    />
+  </head>
+  <body>
     <!-- Loading Screen -->
     <div class="loading-screen" id="loading">
-        <div class="pokeball-spinner"></div>
-        <p>Cargando entrenadores...</p>
+      <div class="pokeball-spinner"></div>
+      <p>Cargando entrenadores...</p>
     </div>
 
     <header>
-        <div class="header-content">
-            <div class="header-titles">
-                <h1>🏆 Espectral Pokémon League</h1>
-                <p>Listado de entreadores</p>
-            </div>
-            <div class="header-actions">
-                <button id="auth-btn" class="auth-btn" onclick="showAuthModal()">👤 Iniciar Sesión</button>
-                <div id="user-profile" class="user-profile" style="display: none;">
-                    <div id="user-avatar-container" class="header-avatar-circle"></div>
-                    <span id="user-username"></span>
-                    <button class="auth-btn settings-btn" onclick="showProfileModal()" title="Configuración">⚙️</button>
-                    <button class="auth-btn logout-btn" onclick="logout()">Salir</button>
-                </div>
-            </div>
+      <div class="header-content">
+        <div class="header-titles">
+          <h1>🏆 Espectral Pokémon League</h1>
+          <p>Listado de entreadores</p>
         </div>
+        <div class="header-actions">
+          <button id="auth-btn" class="auth-btn" onclick="showAuthModal()">
+            👤 Iniciar Sesión
+          </button>
+          <div id="user-profile" class="user-profile" style="display: none">
+            <div id="user-avatar-container" class="header-avatar-circle"></div>
+            <span id="user-username"></span>
+            <button
+              class="auth-btn settings-btn"
+              onclick="showProfileModal()"
+              title="Configuración"
+            >
+              ⚙️
+            </button>
+            <button class="auth-btn logout-btn" onclick="logout()">
+              Salir
+            </button>
+          </div>
+        </div>
+      </div>
     </header>
 
     <!-- Main Tabs -->
     <nav class="league-tabs">
-        <button class="league-tab active" data-tab="trainers" onclick="switchLeagueTab('trainers')">👥 Entrenadores</button>
-        <button class="league-tab" data-tab="routes" onclick="switchLeagueTab('routes')">🗺️ Rutas</button>
-        <button class="league-tab" data-tab="rankings" onclick="switchLeagueTab('rankings')">📊 Rankings</button>
-        <button class="league-tab" data-tab="info" onclick="switchLeagueTab('info')">📋 Información</button>
-        <button class="league-tab" data-tab="battles" onclick="switchLeagueTab('battles')">⚔️ Combates</button>
+      <button
+        class="league-tab active"
+        data-tab="trainers"
+        onclick="switchLeagueTab('trainers')"
+      >
+        👥 Entrenadores
+      </button>
+      <button
+        class="league-tab"
+        data-tab="routes"
+        onclick="switchLeagueTab('routes')"
+      >
+        🗺️ Rutas
+      </button>
+      <button
+        class="league-tab"
+        data-tab="rankings"
+        onclick="switchLeagueTab('rankings')"
+      >
+        📊 Rankings
+      </button>
+      <button
+        class="league-tab"
+        data-tab="info"
+        onclick="switchLeagueTab('info')"
+      >
+        📋 Información
+      </button>
+      <button
+        class="league-tab"
+        data-tab="battles"
+        onclick="switchLeagueTab('battles')"
+      >
+        ⚔️ Combates
+      </button>
     </nav>
 
     <div class="container">
-        <!-- TAB: Entrenadores -->
-        <section class="league-tab-content active" id="tab-trainers">
-            <div class="trainers-section" id="trainers-section">
-                <div class="section-title">
-                    <span class="icon">👥</span>
-                    <span>Entrenadores</span>
-                    <span class="count" id="trainer-count">0</span>
-                </div>
-                <div class="trainers-grid" id="trainers-grid"></div>
-            </div>
+      <!-- TAB: Entrenadores -->
+      <section class="league-tab-content active" id="tab-trainers">
+        <div class="trainers-section" id="trainers-section">
+          <div class="section-title">
+            <span class="icon">👥</span>
+            <span>Entrenadores</span>
+            <span class="count" id="trainer-count">0</span>
+          </div>
+          <div class="trainers-grid" id="trainers-grid"></div>
+        </div>
 
-            <!-- Trainer Detail View (hidden initially) -->
-            <section class="detail-section" id="detail-section" style="display:none">
-                <button class="back-btn" id="back-btn" onclick="showTrainerList()">← Volver</button>
-                <div id="trainer-detail"></div>
-            </section>
+        <!-- Trainer Detail View (hidden initially) -->
+        <section
+          class="detail-section"
+          id="detail-section"
+          style="display: none"
+        >
+          <button class="back-btn" id="back-btn" onclick="showTrainerList()">
+            ← Volver
+          </button>
+          <div id="trainer-detail"></div>
         </section>
+      </section>
 
-        <!-- TAB: Rutas -->
-        <section class="league-tab-content" id="tab-routes">
-            <div class="section-title">
-                <span class="icon">🗺️</span>
-                <span>Pokémon por Ruta</span>
-                <span class="count" id="routes-count">0</span>
+      <!-- TAB: Rutas -->
+      <section class="league-tab-content" id="tab-routes">
+        <div class="section-title">
+          <span class="icon">🗺️</span>
+          <span>Pokémon por Ruta</span>
+          <span class="count" id="routes-count">0</span>
+        </div>
+        <div id="routes-container"></div>
+      </section>
+
+      <!-- TAB: Rankings -->
+      <section class="league-tab-content" id="tab-rankings">
+        <!-- Ranking Sub-Tabs -->
+        <div class="ranking-tabs">
+          <button
+            class="ranking-tab active"
+            data-rtab="points"
+            onclick="switchRankingTab('points')"
+          >
+            🏆 Más Puntos
+          </button>
+          <button
+            class="ranking-tab"
+            data-rtab="deaths"
+            onclick="switchRankingTab('deaths')"
+          >
+            💀 Más Muertos
+          </button>
+          <button
+            class="ranking-tab"
+            data-rtab="shinys"
+            onclick="switchRankingTab('shinys')"
+          >
+            ✨ Más Shinys
+          </button>
+        </div>
+
+        <!-- Puntos Panel -->
+        <div class="ranking-panel active" id="rpanel-points">
+          <div id="ranking-points"></div>
+        </div>
+
+        <!-- Muertos Panel -->
+        <div class="ranking-panel" id="rpanel-deaths">
+          <div id="ranking-deaths"></div>
+        </div>
+
+        <!-- Shinys Panel -->
+        <div class="ranking-panel" id="rpanel-shinys">
+          <div id="ranking-shinys"></div>
+        </div>
+      </section>
+
+      <!-- TAB: Información -->
+      <section class="league-tab-content" id="tab-info">
+        <!-- Info Sub-Tabs -->
+        <div class="info-tabs">
+          <button
+            class="info-tab active"
+            data-itab="gym-leaders"
+            onclick="switchInfoTab('gym-leaders')"
+          >
+            🏟️ Líderes de Gimnasio
+          </button>
+          <button
+            class="info-tab"
+            data-itab="rules"
+            onclick="switchInfoTab('rules')"
+          >
+            📜 Reglas
+          </button>
+          <button
+            class="info-tab"
+            data-itab="pokemon-list"
+            onclick="switchInfoTab('pokemon-list')"
+          >
+            📋 Pokémon Permitidos
+          </button>
+          <button
+            class="info-tab prize-pool-tab"
+            data-itab="prize-pool"
+            onclick="switchInfoTab('prize-pool')"
+          >
+            🏆 Prize Pool
+          </button>
+        </div>
+
+        <!-- Líderes de Gimnasio Panel -->
+        <div class="info-panel active" id="ipanel-gym-leaders">
+          <div id="gym-leaders-content"></div>
+        </div>
+
+        <!-- Reglas Panel -->
+        <div class="info-panel" id="ipanel-rules">
+          <div class="rules-container">
+            <div class="rules-title-row">
+              <span class="rules-title-icon">📜</span>
+              <h2 class="rules-title">Reglas del Nuzlocke</h2>
             </div>
-            <div id="routes-container"></div>
-        </section>
-
-        <!-- TAB: Rankings -->
-        <section class="league-tab-content" id="tab-rankings">
-            <!-- Ranking Sub-Tabs -->
-            <div class="ranking-tabs">
-                <button class="ranking-tab active" data-rtab="points" onclick="switchRankingTab('points')">🏆 Más Puntos</button>
-                <button class="ranking-tab" data-rtab="deaths" onclick="switchRankingTab('deaths')">💀 Más Muertos</button>
-                <button class="ranking-tab" data-rtab="shinys" onclick="switchRankingTab('shinys')">✨ Más Shinys</button>
-            </div>
-
-            <!-- Puntos Panel -->
-            <div class="ranking-panel active" id="rpanel-points">
-                <div id="ranking-points"></div>
-            </div>
-
-            <!-- Muertos Panel -->
-            <div class="ranking-panel" id="rpanel-deaths">
-                <div id="ranking-deaths"></div>
-            </div>
-
-            <!-- Shinys Panel -->
-            <div class="ranking-panel" id="rpanel-shinys">
-                <div id="ranking-shinys"></div>
-            </div>
-        </section>
-
-        <!-- TAB: Información -->
-        <section class="league-tab-content" id="tab-info">
-            <!-- Info Sub-Tabs -->
-            <div class="info-tabs">
-                <button class="info-tab active" data-itab="gym-leaders" onclick="switchInfoTab('gym-leaders')">🏟️ Líderes de Gimnasio</button>
-                <button class="info-tab" data-itab="rules" onclick="switchInfoTab('rules')">📜 Reglas</button>
-                <button class="info-tab" data-itab="pokemon-list" onclick="switchInfoTab('pokemon-list')">📋 Pokémon Permitidos</button>
-            </div>
-
-            <!-- Líderes de Gimnasio Panel -->
-            <div class="info-panel active" id="ipanel-gym-leaders">
-                <div id="gym-leaders-content"></div>
-            </div>
-
-            <!-- Reglas Panel -->
-            <div class="info-panel" id="ipanel-rules">
-                <div class="rules-container">
-                    <div class="rules-title-row">
-                        <span class="rules-title-icon">📜</span>
-                        <h2 class="rules-title">Reglas del Nuzlocke</h2>
-                    </div>
-                    <ol class="rules-list">
-                        <li class="rule-item rule-death">
-                            <span class="rule-icon">💀</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Muerte permanente</span>
-                                Si se te muere un Pokémon, se muere para siempre.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-nickname">
-                            <span class="rule-icon">🏷️</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Mote obligatorio</span>
-                                Es obligatorio ponerle mote a los Pokémon. Un Pokémon sin mote no puede ser utilizado.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-level">
-                            <span class="rule-icon">📊</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Límite de nivel</span>
-                                No puedes subir a los Pokémon más del nivel del gimnasio que te toque. Los niveles están en <strong onclick="switchInfoTab('gym-leaders')" style="cursor:pointer;color:var(--accent,#7c3aed);text-decoration:underline;">Información → Nivel de Pokémon</strong>                          </div>
-                        </li>
-                        <li class="rule-item rule-catch">
-                            <span class="rule-icon">🎣</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Primer Pokémon de ruta</span>
-                                Solo puedes capturar el primer Pokémon de cada ruta. Hasta tener 2 medallas, serán los 2 primeros Pokémon de la ruta.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-catch">
-                            <span class="rule-icon">💎</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Megaevolucionados en ruta</span>
-                                Si el primer Pokémon de ruta es un Pokémon megaevolucionado, no cuenta y deberás ir a por el siguiente que te salga.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-gift">
-                            <span class="rule-icon">🎁</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Pokémon extra</span>
-                                Los Pokémon de regalo, fósil o el Snorlax no cuentan como Pokémon de ruta, sino como Pokémon extra.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-items">
-                            <span class="rule-icon">🚫</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Sin objetos curativos</span>
-                                No se pueden comprar objetos curativos.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-mode">
-                            <span class="rule-icon">⚙️</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Modo Mantener</span>
-                                Es obligatorio poner el modo Mantener.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-candy">
-                            <span class="rule-icon">🍬</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Caramelos Raros</span>
-                                Se podrán vender 5 Caramelos Raros al inicio de la aventura.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">⛔</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Pokémon permitidos</span>
-                                Hay Pokémon que no están permitidos. Puedes ver la lista completa en la pestaña <strong onclick="switchInfoTab('pokemon-list')" style="cursor:pointer;color:var(--accent,#7c3aed);text-decoration:underline;">📋 Pokémon Permitidos</strong>
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">😴</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Sleep Clause</span>
-                                En los combates entre jugadores se aplica Sleep Clause: no puedes dormir a más de un Pokémon del rival a la vez.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">⚔️</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Formato Dobles</span>
-                                El formato de los combates entre jugadores es Dobles (2 vs 2).
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">📋</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Open Teamsheets</span>
-                                Habrá Open Teamsheets: antes del combate se comparten los equipos entre ambos jugadores.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">🎒</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Item Clause</span>
-                                Solo se puede llevar 1 copia de cada objeto en el equipo. Por ejemplo, no se pueden llevar 2 Pokémon con Restos.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">🦥</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Hordas no cuentan</span>
-                                Las hordas no cuentan como Pokémon de ruta, en caso de que te salga una horda como primer Pokémon de ruta escapas y puedes capturar el siguiente Pokémon que te salga. (Si sale un shiny si se puede capturar)
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">📀</span>
-                            <div class="rule-text">
-                                <span class="rule-label">MT Esquema prohibida</span>
-                                Si te sale la MT Esquema (Sketch), no puedes usarla.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-legendary">
-                            <span class="rule-icon">🎯</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Indefenso + OHKO prohibido</span>
-                                Si tienes un Pokémon con la habilidad Indefenso (No Guard), no puedes enseñarle movimientos de KO en un golpe (Fisura, Frío Polar).
-                            </div>
-                        </li>
-                        <li class="rule-item rule-death">
-                            <span class="rule-icon">🖥️</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Registro manual de muertes</span>
-                                En caso de wipeo (todo el equipo derrotado) o si curas un Pokémon antes de guardar, debes ir a la aplicación de escritorio → pestaña Actual. Cada Pokémon tiene un botón 💀 para registrar la muerte manualmente.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-items">
-                            <span class="rule-icon">🎒</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Sin objetos duplicados en combate</span>
-                                En los combates Pokémon no se pueden llevar 2 Pokémon con el mismo objeto. Por ejemplo, no puedes llevar 2 Pokémon con Restos o 2 con Chaleco Asalto.
-                            </div>
-                        </li>
-                        <li class="rule-item rule-items">
-                            <span class="rule-icon">✨</span>
-                            <div class="rule-text">
-                                <span class="rule-label">Shinys</span>
-                                Si te sale un shiny, puedes capturarlo y cuenta como pokemon extra en la ruta. (En caso de que sea el primero de la ruta, lo captures y vas a por otro adicional)
-                            </div>
-                        </li>
-                        <li class="rule-item rule-cheat">
-                            <span class="rule-icon">🔨</span>
-                            <div class="rule-text"> 
-                                <span class="rule-label">Trampas — expulsión inmediata</span>
-                                Cualquier caso de trampas será sancionado con la expulsión inmediata del jugador.
-                            </div>
-                        </li>
-                    </ol>
+            <ol class="rules-list">
+              <li class="rule-item rule-death">
+                <span class="rule-icon">💀</span>
+                <div class="rule-text">
+                  <span class="rule-label">Muerte permanente</span>
+                  Si se te muere un Pokémon, se muere para siempre.
                 </div>
+              </li>
+              <li class="rule-item rule-nickname">
+                <span class="rule-icon">🏷️</span>
+                <div class="rule-text">
+                  <span class="rule-label">Mote obligatorio</span>
+                  Es obligatorio ponerle mote a los Pokémon. Un Pokémon sin mote
+                  no puede ser utilizado.
+                </div>
+              </li>
+              <li class="rule-item rule-level">
+                <span class="rule-icon">📊</span>
+                <div class="rule-text">
+                  <span class="rule-label">Límite de nivel</span>
+                  No puedes subir a los Pokémon más del nivel del gimnasio que
+                  te toque. Los niveles están en
+                  <strong
+                    onclick="switchInfoTab('gym-leaders')"
+                    style="
+                      cursor: pointer;
+                      color: var(--accent, #7c3aed);
+                      text-decoration: underline;
+                    "
+                    >Información → Nivel de Pokémon</strong
+                  >
+                </div>
+              </li>
+              <li class="rule-item rule-catch">
+                <span class="rule-icon">🎣</span>
+                <div class="rule-text">
+                  <span class="rule-label">Primer Pokémon de ruta</span>
+                  Solo puedes capturar el primer Pokémon de cada ruta. Hasta
+                  tener 2 medallas, serán los 2 primeros Pokémon de la ruta.
+                </div>
+              </li>
+              <li class="rule-item rule-catch">
+                <span class="rule-icon">💎</span>
+                <div class="rule-text">
+                  <span class="rule-label">Megaevolucionados en ruta</span>
+                  Si el primer Pokémon de ruta es un Pokémon megaevolucionado,
+                  no cuenta y deberás ir a por el siguiente que te salga.
+                </div>
+              </li>
+              <li class="rule-item rule-gift">
+                <span class="rule-icon">🎁</span>
+                <div class="rule-text">
+                  <span class="rule-label">Pokémon extra</span>
+                  Los Pokémon de regalo, fósil o el Snorlax no cuentan como
+                  Pokémon de ruta, sino como Pokémon extra.
+                </div>
+              </li>
+              <li class="rule-item rule-items">
+                <span class="rule-icon">🚫</span>
+                <div class="rule-text">
+                  <span class="rule-label">Sin objetos curativos</span>
+                  No se pueden comprar objetos curativos.
+                </div>
+              </li>
+              <li class="rule-item rule-mode">
+                <span class="rule-icon">⚙️</span>
+                <div class="rule-text">
+                  <span class="rule-label">Modo Mantener</span>
+                  Es obligatorio poner el modo Mantener.
+                </div>
+              </li>
+              <li class="rule-item rule-candy">
+                <span class="rule-icon">🍬</span>
+                <div class="rule-text">
+                  <span class="rule-label">Caramelos Raros</span>
+                  Se podrán vender 5 Caramelos Raros al inicio de la aventura.
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">⛔</span>
+                <div class="rule-text">
+                  <span class="rule-label">Pokémon permitidos</span>
+                  Hay Pokémon que no están permitidos. Puedes ver la lista
+                  completa en la pestaña
+                  <strong
+                    onclick="switchInfoTab('pokemon-list')"
+                    style="
+                      cursor: pointer;
+                      color: var(--accent, #7c3aed);
+                      text-decoration: underline;
+                    "
+                    >📋 Pokémon Permitidos</strong
+                  >
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">😴</span>
+                <div class="rule-text">
+                  <span class="rule-label">Sleep Clause</span>
+                  En los combates entre jugadores se aplica Sleep Clause: no
+                  puedes dormir a más de un Pokémon del rival a la vez.
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">⚔️</span>
+                <div class="rule-text">
+                  <span class="rule-label">Formato Dobles</span>
+                  El formato de los combates entre jugadores es Dobles (2 vs 2).
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">📋</span>
+                <div class="rule-text">
+                  <span class="rule-label">Open Teamsheets</span>
+                  Habrá Open Teamsheets: antes del combate se comparten los
+                  equipos entre ambos jugadores.
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">🎒</span>
+                <div class="rule-text">
+                  <span class="rule-label">Item Clause</span>
+                  Solo se puede llevar 1 copia de cada objeto en el equipo. Por
+                  ejemplo, no se pueden llevar 2 Pokémon con Restos.
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">🦥</span>
+                <div class="rule-text">
+                  <span class="rule-label">Hordas no cuentan</span>
+                  Las hordas no cuentan como Pokémon de ruta, en caso de que te
+                  salga una horda como primer Pokémon de ruta escapas y puedes
+                  capturar el siguiente Pokémon que te salga. (Si sale un shiny
+                  si se puede capturar)
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">📀</span>
+                <div class="rule-text">
+                  <span class="rule-label">MT Esquema prohibida</span>
+                  Si te sale la MT Esquema (Sketch), no puedes usarla.
+                </div>
+              </li>
+              <li class="rule-item rule-legendary">
+                <span class="rule-icon">🎯</span>
+                <div class="rule-text">
+                  <span class="rule-label">Indefenso + OHKO prohibido</span>
+                  Si tienes un Pokémon con la habilidad Indefenso (No Guard), no
+                  puedes enseñarle movimientos de KO en un golpe (Fisura, Frío
+                  Polar).
+                </div>
+              </li>
+              <li class="rule-item rule-death">
+                <span class="rule-icon">🖥️</span>
+                <div class="rule-text">
+                  <span class="rule-label">Registro manual de muertes</span>
+                  En caso de wipeo (todo el equipo derrotado) o si curas un
+                  Pokémon antes de guardar, debes ir a la aplicación de
+                  escritorio → pestaña Actual. Cada Pokémon tiene un botón 💀
+                  para registrar la muerte manualmente.
+                </div>
+              </li>
+              <li class="rule-item rule-items">
+                <span class="rule-icon">🎒</span>
+                <div class="rule-text">
+                  <span class="rule-label"
+                    >Sin objetos duplicados en combate</span
+                  >
+                  En los combates Pokémon no se pueden llevar 2 Pokémon con el
+                  mismo objeto. Por ejemplo, no puedes llevar 2 Pokémon con
+                  Restos o 2 con Chaleco Asalto.
+                </div>
+              </li>
+              <li class="rule-item rule-items">
+                <span class="rule-icon">✨</span>
+                <div class="rule-text">
+                  <span class="rule-label">Shinys</span>
+                  Si te sale un shiny, puedes capturarlo y cuenta como pokemon
+                  extra en la ruta. (En caso de que sea el primero de la ruta,
+                  lo captures y vas a por otro adicional)
+                </div>
+              </li>
+              <li class="rule-item rule-cheat">
+                <span class="rule-icon">🔨</span>
+                <div class="rule-text">
+                  <span class="rule-label">Trampas — expulsión inmediata</span>
+                  Cualquier caso de trampas será sancionado con la expulsión
+                  inmediata del jugador.
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Pokémon Permitidos Panel -->
+        <div class="info-panel" id="ipanel-pokemon-list">
+          <div class="rules-container">
+            <div class="rules-title-row">
+              <span class="rules-title-icon">📋</span>
+              <h2 class="rules-title">Pokémon Permitidos y Prohibidos</h2>
+            </div>
+            <div id="pokemon-list-content">
+              <!-- Contenido generado dinámicamente desde app.js -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Prize Pool Panel -->
+        <div class="info-panel" id="ipanel-prize-pool">
+          <div class="prize-pool-container">
+            <div class="prize-pool-header">
+              <span class="prize-pool-trophy">🏆</span>
+              <h2 class="prize-pool-title">Prize Pool</h2>
             </div>
 
-            <!-- Pokémon Permitidos Panel -->
-            <div class="info-panel" id="ipanel-pokemon-list">
-                <div class="rules-container">
-                    <div class="rules-title-row">
-                        <span class="rules-title-icon">📋</span>
-                        <h2 class="rules-title">Pokémon Permitidos y Prohibidos</h2>
-                    </div>
-                    <div id="pokemon-list-content">
-                        <!-- Contenido generado dinámicamente desde app.js -->
-                    </div>
+            <!-- Prize Cards -->
+            <div class="prize-cards-grid">
+              <!-- PvE Points Prize -->
+              <div class="prize-card prize-card-pve">
+                <div class="prize-card-icon">🎖️</div>
+                <div class="prize-card-category">Ganador PvE — Puntos</div>
+                <div class="prize-card-amount">10 €</div>
+                <div class="prize-card-desc">
+                  El entrenador que acumule <strong>más puntos PvE</strong> al
+                  terminar la fase PVE se lleva el premio. Los puntos se calculan en
+                  base a los retos completados.
                 </div>
-            </div>
-        </section>
+              </div>
 
-        <!-- TAB: Combates -->
-        <section class="league-tab-content" id="tab-battles">
-            <!-- Battles Sub-Tabs -->
-            <div class="battles-tabs" id="battles-auth-tabs" style="display:none">
-                <button class="battles-tab active" data-btab="bracket" onclick="switchBattlesTab('bracket')">🏆 Torneo Completo</button>
-                <button class="battles-tab" data-btab="mymatches" onclick="switchBattlesTab('mymatches')">⚔️ Mis Enfrentamientos</button>
-            </div>
-            
-            <div id="battles-unauth" class="wip-panel">
-                <div class="wip-icon">👤</div>
-                <h2>Inicia sesión para ver el Torneo</h2>
-                <p>Participa en el Triple Bracket reportando tus combates.</p>
-                <button class="auth-btn" onclick="showAuthModal()" style="margin-top: 16px;">Iniciar Sesión</button>
+              <!-- Combat Prize -->
+              <div class="prize-card prize-card-pvp">
+                <div class="prize-card-icon">⚔️</div>
+                <div class="prize-card-category">Ganador de Combates</div>
+                <div class="prize-card-amount">25 €</div>
+                <div class="prize-card-desc">
+                  El entrenador que
+                  <strong>gane el torneo de combates</strong> entre jugadores
+                   se lleva el premio mayor.
+                </div>
+              </div>
             </div>
 
-            <!-- Torneo Completo Panel -->
-            <div class="battles-panel active" id="bpanel-bracket" style="display:none">
-                <div class="bracket-admin-panel" id="bracket-admin-panel" style="display: none; text-align: right; margin-bottom: 16px;">
-                    <button class="auth-btn" style="background:var(--accent-gold);color:#000;" onclick="adminGenerateTournament()">⚙️ Admin: Generar Torneo</button>
-                </div>
-                
-                <div class="bracket-viewer">
-                    <!-- Winners Bracket -->
-                    <div class="bracket-section" id="upper-bracket">
-                        <h3>🏆 Winners Bracket</h3>
-                        <div class="bracket-rounds" id="upper-rounds"></div>
-                    </div>
-                    <!-- Middle Bracket -->
-                    <div class="bracket-section" id="middle-bracket">
-                        <h3>⚔️ Middle Bracket</h3>
-                        <div class="bracket-rounds" id="middle-rounds"></div>
-                    </div>
-                    <!-- Lower Bracket -->
-                    <div class="bracket-section" id="lower-bracket">
-                        <h3>💀 Lower Bracket</h3>
-                        <div class="bracket-rounds" id="lower-rounds"></div>
-                    </div>
-                    <!-- Semifinals & Grand Final -->
-                    <div class="bracket-section bracket-grand-final" id="grand-final-section">
-                        <h3>👑 Finales</h3>
-                        <div id="grand-final-content"></div>
-                    </div>
-                </div>
+            <!-- Anti-Cheat Warning -->
+            <div class="prize-anticheat">
+              <div class="prize-anticheat-icon">🔍</div>
+              <div class="prize-anticheat-text">
+                <span class="prize-anticheat-title"
+                  >Control exhaustivo anti-trampas</span
+                >
+                <p>
+                  Las acciones de todos los usuarios serán
+                  <strong>comprobadas minuciosamente</strong> antes de entregar
+                  cualquier premio. Cualquier irregularidad, trampa o
+                  comportamiento sospechoso resultará en la
+                  <strong>descalificación inmediata</strong> y pérdida del
+                  derecho al premio.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: Combates -->
+      <section class="league-tab-content" id="tab-battles">
+        <!-- Battles Sub-Tabs -->
+        <div class="battles-tabs" id="battles-auth-tabs" style="display: none">
+          <button
+            class="battles-tab active"
+            data-btab="bracket"
+            onclick="switchBattlesTab('bracket')"
+          >
+            🏆 Torneo Completo
+          </button>
+          <button
+            class="battles-tab"
+            data-btab="mymatches"
+            onclick="switchBattlesTab('mymatches')"
+          >
+            ⚔️ Mis Enfrentamientos
+          </button>
+        </div>
+
+        <div id="battles-unauth" class="wip-panel">
+          <div class="wip-icon">👤</div>
+          <h2>Inicia sesión para ver el Torneo</h2>
+          <p>Participa en el Triple Bracket reportando tus combates.</p>
+          <button
+            class="auth-btn"
+            onclick="showAuthModal()"
+            style="margin-top: 16px"
+          >
+            Iniciar Sesión
+          </button>
+        </div>
+
+        <!-- Torneo Completo Panel -->
+        <div
+          class="battles-panel active"
+          id="bpanel-bracket"
+          style="display: none"
+        >
+          <div
+            class="bracket-admin-panel"
+            id="bracket-admin-panel"
+            style="display: none; text-align: right; margin-bottom: 16px"
+          >
+            <button
+              class="auth-btn"
+              style="background: var(--accent-gold); color: #000"
+              onclick="adminGenerateTournament()"
+            >
+              ⚙️ Admin: Generar Torneo
+            </button>
+          </div>
+
+          <div class="bracket-viewer">
+            <!-- Winners Bracket -->
+            <div class="bracket-section" id="upper-bracket">
+              <h3>🏆 Winners Bracket</h3>
+              <div class="bracket-rounds" id="upper-rounds"></div>
+            </div>
+            <!-- Middle Bracket -->
+            <div class="bracket-section" id="middle-bracket">
+              <h3>⚔️ Middle Bracket</h3>
+              <div class="bracket-rounds" id="middle-rounds"></div>
+            </div>
+            <!-- Lower Bracket -->
+            <div class="bracket-section" id="lower-bracket">
+              <h3>💀 Lower Bracket</h3>
+              <div class="bracket-rounds" id="lower-rounds"></div>
+            </div>
+            <!-- Semifinals & Grand Final -->
+            <div
+              class="bracket-section bracket-grand-final"
+              id="grand-final-section"
+            >
+              <h3>👑 Finales</h3>
+              <div id="grand-final-content"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mis Enfrentamientos Panel -->
+        <div class="battles-panel" id="bpanel-mymatches" style="display: none">
+          <div class="my-matches-container">
+            <!-- Actual Match -->
+            <div class="current-match-section" id="current-match-section">
+              <h3>⚔️ Enfrentamiento Actual</h3>
+              <div id="current-match-content"></div>
             </div>
 
-            <!-- Mis Enfrentamientos Panel -->
-            <div class="battles-panel" id="bpanel-mymatches" style="display:none">
-                <div class="my-matches-container">
-                    <!-- Actual Match -->
-                    <div class="current-match-section" id="current-match-section">
-                        <h3>⚔️ Enfrentamiento Actual</h3>
-                        <div id="current-match-content"></div>
-                    </div>
-                    
-                    <!-- Past Matches -->
-                    <div class="past-matches-section" id="past-matches-section">
-                        <h3>📜 Historial</h3>
-                        <div id="past-matches-content"></div>
-                    </div>
-                </div>
+            <!-- Past Matches -->
+            <div class="past-matches-section" id="past-matches-section">
+              <h3>📜 Historial</h3>
+              <div id="past-matches-content"></div>
             </div>
-        </section>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- Detail Modal -->
     <div class="modal-overlay" id="modal-overlay">
-        <div class="modal-content" id="modal-content"></div>
+      <div class="modal-content" id="modal-content"></div>
     </div>
 
     <!-- Auth Modal -->
     <div class="modal-overlay" id="auth-modal-overlay">
-        <div class="auth-modal-content">
-            <button class="modal-close" onclick="closeAuthModal()">✕</button>
-            <div class="auth-tabs">
-                <button class="auth-tab active" onclick="switchAuthMode('login')">Entrar</button>
-                <button class="auth-tab" onclick="switchAuthMode('register')">Crear Cuenta</button>
-            </div>
-            
-            <!-- Login Form -->
-            <form id="login-form">
-                <h2>Iniciar Sesión</h2>
-                <input type="text" id="login-user" placeholder="Usuario" required autocomplete="username">
-                <input type="password" id="login-pass" placeholder="Contraseña" required autocomplete="current-password">
-                <p id="login-error" class="error-msg"></p>
-                <button type="submit" class="auth-submit">Entrar</button>
-            </form>
-
-            <!-- Register Form -->
-            <form id="register-form" style="display:none">
-                <h2>Crear Cuenta</h2>
-                <input type="text" id="register-user" placeholder="Usuario" required autocomplete="username">
-                <input type="password" id="register-pass" placeholder="Contraseña" required autocomplete="new-password">
-                <p id="register-error" class="error-msg"></p>
-                <button type="submit" class="auth-submit">Registrarse</button>
-            </form>
+      <div class="auth-modal-content">
+        <button class="modal-close" onclick="closeAuthModal()">✕</button>
+        <div class="auth-tabs">
+          <button class="auth-tab active" onclick="switchAuthMode('login')">
+            Entrar
+          </button>
+          <button class="auth-tab" onclick="switchAuthMode('register')">
+            Crear Cuenta
+          </button>
         </div>
+
+        <!-- Login Form -->
+        <form id="login-form">
+          <h2>Iniciar Sesión</h2>
+          <input
+            type="text"
+            id="login-user"
+            placeholder="Usuario"
+            required
+            autocomplete="username"
+          />
+          <input
+            type="password"
+            id="login-pass"
+            placeholder="Contraseña"
+            required
+            autocomplete="current-password"
+          />
+          <p id="login-error" class="error-msg"></p>
+          <button type="submit" class="auth-submit">Entrar</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" style="display: none">
+          <h2>Crear Cuenta</h2>
+          <input
+            type="text"
+            id="register-user"
+            placeholder="Usuario"
+            required
+            autocomplete="username"
+          />
+          <input
+            type="password"
+            id="register-pass"
+            placeholder="Contraseña"
+            required
+            autocomplete="new-password"
+          />
+          <p id="register-error" class="error-msg"></p>
+          <button type="submit" class="auth-submit">Registrarse</button>
+        </form>
+      </div>
     </div>
 
     <!-- Profile Settings Modal -->
     <div class="modal-overlay" id="profile-modal-overlay">
-        <div class="auth-modal-content profile-modal">
-            <button class="modal-close" onclick="closeProfileModal()">✕</button>
-            <h2 style="text-align:center;margin-bottom:20px;">⚙️ Configuración de Perfil</h2>
+      <div class="auth-modal-content profile-modal">
+        <button class="modal-close" onclick="closeProfileModal()">✕</button>
+        <h2 style="text-align: center; margin-bottom: 20px">
+          ⚙️ Configuración de Perfil
+        </h2>
 
-            <!-- Avatar Section -->
-            <div class="profile-section">
-                <h3 class="profile-section-title">📷 Imagen de perfil</h3>
-                <div class="profile-avatar-row">
-                    <div class="profile-avatar-preview" id="profile-avatar-preview"></div>
-                    <div class="profile-avatar-actions">
-                        <input type="file" id="profile-avatar-file" accept="image/*" style="display:none" onchange="previewProfileAvatar(this)">
-                        <button class="profile-btn" onclick="document.getElementById('profile-avatar-file').click()">Elegir imagen</button>
-                        <button class="profile-btn profile-btn-danger" onclick="removeProfileAvatar()">Quitar</button>
-                    </div>
-                </div>
-                <button class="profile-btn profile-btn-save" id="profile-save-avatar" onclick="saveProfileAvatar()">Guardar avatar</button>
-                <p class="profile-msg" id="profile-avatar-msg"></p>
+        <!-- Avatar Section -->
+        <div class="profile-section">
+          <h3 class="profile-section-title">📷 Imagen de perfil</h3>
+          <div class="profile-avatar-row">
+            <div
+              class="profile-avatar-preview"
+              id="profile-avatar-preview"
+            ></div>
+            <div class="profile-avatar-actions">
+              <input
+                type="file"
+                id="profile-avatar-file"
+                accept="image/*"
+                style="display: none"
+                onchange="previewProfileAvatar(this)"
+              />
+              <button
+                class="profile-btn"
+                onclick="document.getElementById('profile-avatar-file').click()"
+              >
+                Elegir imagen
+              </button>
+              <button
+                class="profile-btn profile-btn-danger"
+                onclick="removeProfileAvatar()"
+              >
+                Quitar
+              </button>
             </div>
-
-            <hr class="profile-divider">
-
-            <!-- Username Section -->
-            <div class="profile-section">
-                <h3 class="profile-section-title">✏️ Cambiar nombre de usuario</h3>
-                <input type="text" id="profile-new-username" placeholder="Nuevo nombre" class="profile-input" autocomplete="off">
-                <input type="password" id="profile-username-pass" placeholder="Contraseña actual" class="profile-input" autocomplete="current-password">
-                <button class="profile-btn profile-btn-save" onclick="saveProfileUsername()">Cambiar nombre</button>
-                <p class="profile-msg" id="profile-username-msg"></p>
-            </div>
-
-            <hr class="profile-divider">
-
-            <!-- Password Section -->
-            <div class="profile-section">
-                <h3 class="profile-section-title">🔒 Cambiar contraseña</h3>
-                <input type="password" id="profile-current-pass" placeholder="Contraseña actual" class="profile-input" autocomplete="current-password">
-                <input type="password" id="profile-new-pass" placeholder="Nueva contraseña" class="profile-input" autocomplete="new-password">
-                <button class="profile-btn profile-btn-save" onclick="saveProfilePassword()">Cambiar contraseña</button>
-                <p class="profile-msg" id="profile-password-msg"></p>
-            </div>
+          </div>
+          <button
+            class="profile-btn profile-btn-save"
+            id="profile-save-avatar"
+            onclick="saveProfileAvatar()"
+          >
+            Guardar avatar
+          </button>
+          <p class="profile-msg" id="profile-avatar-msg"></p>
         </div>
+
+        <hr class="profile-divider" />
+
+        <!-- Username Section -->
+        <div class="profile-section">
+          <h3 class="profile-section-title">✏️ Cambiar nombre de usuario</h3>
+          <input
+            type="text"
+            id="profile-new-username"
+            placeholder="Nuevo nombre"
+            class="profile-input"
+            autocomplete="off"
+          />
+          <input
+            type="password"
+            id="profile-username-pass"
+            placeholder="Contraseña actual"
+            class="profile-input"
+            autocomplete="current-password"
+          />
+          <button
+            class="profile-btn profile-btn-save"
+            onclick="saveProfileUsername()"
+          >
+            Cambiar nombre
+          </button>
+          <p class="profile-msg" id="profile-username-msg"></p>
+        </div>
+
+        <hr class="profile-divider" />
+
+        <!-- Password Section -->
+        <div class="profile-section">
+          <h3 class="profile-section-title">🔒 Cambiar contraseña</h3>
+          <input
+            type="password"
+            id="profile-current-pass"
+            placeholder="Contraseña actual"
+            class="profile-input"
+            autocomplete="current-password"
+          />
+          <input
+            type="password"
+            id="profile-new-pass"
+            placeholder="Nueva contraseña"
+            class="profile-input"
+            autocomplete="new-password"
+          />
+          <button
+            class="profile-btn profile-btn-save"
+            onclick="saveProfilePassword()"
+          >
+            Cambiar contraseña
+          </button>
+          <p class="profile-msg" id="profile-password-msg"></p>
+        </div>
+      </div>
     </div>
 
     <script src="app.js"></script>
-</body>
+  </body>
 </html>
