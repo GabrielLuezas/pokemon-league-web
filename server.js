@@ -79,7 +79,6 @@ app.get('/api/users', async (req, res) => {
                 u.avatar_url,
                 u.created_at,
                 sd.party,
-                sd.boxes,
                 sd.nuzlocke,
                 sd.trainer,
                 sd.nuzlocke_points,

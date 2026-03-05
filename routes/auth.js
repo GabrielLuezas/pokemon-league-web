@@ -68,7 +68,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Username y password son obligatorios' });
         }
 
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+        const result = await pool.query('SELECT id, username, password, avatar_url FROM users WHERE username = $1', [username]);
         if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
@@ -138,7 +138,7 @@ router.put('/username', authMiddleware, async (req, res) => {
         }
 
         // Verify current password
-        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+        const userResult = await pool.query('SELECT id, password FROM users WHERE id = $1', [req.userId]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
         const valid = await bcrypt.compare(password, userResult.rows[0].password);
         if (!valid) return res.status(401).json({ error: 'Contraseña incorrecta' });
@@ -175,7 +175,7 @@ router.put('/password', authMiddleware, async (req, res) => {
         }
 
         // Verify current password
-        const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+        const userResult = await pool.query('SELECT id, password FROM users WHERE id = $1', [req.userId]);
         if (userResult.rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
         const valid = await bcrypt.compare(currentPassword, userResult.rows[0].password);
         if (!valid) return res.status(401).json({ error: 'Contraseña actual incorrecta' });
