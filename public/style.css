@@ -734,24 +734,30 @@ header p {
 
 .pokeball-top {
   position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 50%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
   background: #ff4757;
   border-radius: 32px 32px 0 0;
 }
 
 .pokeball-bottom {
   position: absolute;
-  bottom: 0; left: 0;
-  width: 100%; height: 50%;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
   background: #f0f0f0;
   border-radius: 0 0 32px 32px;
 }
 
 .pokeball-middle {
   position: absolute;
-  top: 50%; left: 0;
-  width: 100%; height: 6px;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 6px;
   background: #222;
   transform: translateY(-50%);
   z-index: 2;
@@ -759,9 +765,11 @@ header p {
 
 .pokeball-center {
   position: absolute;
-  top: 50%; left: 50%;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
-  width: 20px; height: 20px;
+  width: 20px;
+  height: 20px;
   background: #fff;
   border: 4px solid #222;
   border-radius: 50%;
@@ -771,13 +779,27 @@ header p {
 }
 
 @keyframes box-pokeball-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes box-pokeball-blink {
-  0%, 40%, 100% { background: #fff; }
-  50%, 90%      { background: #18dcff; box-shadow: 0 0 0 3px #222, 0 0 8px rgba(24,220,255,0.8); }
+  0%,
+  40%,
+  100% {
+    background: #fff;
+  }
+  50%,
+  90% {
+    background: #18dcff;
+    box-shadow:
+      0 0 0 3px #222,
+      0 0 8px rgba(24, 220, 255, 0.8);
+  }
 }
 
 .box-loading-text {
@@ -789,10 +811,14 @@ header p {
 }
 
 @keyframes box-loading-pulse {
-  0%, 100% { opacity: 0.5; }
-  50%       { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
 }
-
 
 /* ================== GRAVEYARD ================== */
 .graveyard-section {
@@ -1707,10 +1733,104 @@ header p {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 0;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border-color);
 }
+
+/* Collapsible header acts as button */
+.route-header-toggle {
+  cursor: pointer;
+  margin-bottom: 0;
+  padding: 0;
+  border-bottom: none;
+  user-select: none;
+}
+.route-header-toggle:hover .route-title {
+  color: #667eea;
+}
+
+/* Chevron arrow */
+.route-chevron {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+  display: inline-block;
+  transform: rotate(0deg);
+}
+.route-chevron.open {
+  transform: rotate(90deg);
+  color: #667eea;
+}
+
+/* Collapsible grid wrapper */
+.route-grid-wrap {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.35s ease,
+    opacity 0.25s ease,
+    padding 0.25s ease;
+  padding-top: 0;
+}
+.route-grid-wrap.open {
+  max-height: 9999px;
+  opacity: 1;
+  padding-top: 16px;
+}
+
+/* Hide route boxes that have 0 matches when filtering */
+.route-box-hidden {
+  display: none;
+}
+
+/* ================== ROUTES FILTER BAR ================== */
+.routes-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.routes-filter-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+.routes-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.route-filter-pill {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.route-filter-pill:hover {
+  border-color: rgba(103, 126, 234, 0.45);
+  color: var(--text-secondary);
+  background: rgba(103, 126, 234, 0.08);
+}
+.route-filter-pill.active {
+  background: rgba(103, 126, 234, 0.2);
+  border-color: rgba(103, 126, 234, 0.5);
+  color: #667eea;
+  box-shadow: 0 0 10px rgba(103, 126, 234, 0.15);
+}
+
 .route-title {
   font-size: 1.15rem;
   font-weight: 700;

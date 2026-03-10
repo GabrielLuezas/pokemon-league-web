@@ -795,85 +795,150 @@ const LOCATION_DISPLAY = {
 
 // ===================== ROUTES TAB =====================
 
+// Persisted state for routes tab
+let _routeMap = {};         // locationId → [{ pokemon, username, initial, avatarUrl }]
+let _routeValidIds = [];    // sorted, valid location IDs
+let _openRoutes = new Set(); // which route locIds are expanded
+let _routeFilter = 'all';    // username filter, 'all' = show everyone
+
 function renderRoutes() {
     const container = document.getElementById('routes-container');
     const countEl = document.getElementById('routes-count');
     if (!container) return;
 
     // Collect ALL pokemon from ALL users
-    const routeMap = {}; // locationId → [{ pokemon, username, initial }]
+    _routeMap = {};
+    const trainerNames = new Set();
 
     allUsers.forEach(user => {
         const username = user.username || 'Unknown';
         const initial = username.charAt(0).toUpperCase();
         const party = user.party || [];
         const boxes = user.boxes || [];
+        trainerNames.add(username);
 
         const addPoke = (poke) => {
             if (!poke || poke.isEgg) return;
             const locId = poke.metLocation || 0;
-            if (!routeMap[locId]) routeMap[locId] = [];
-            routeMap[locId].push({ pokemon: poke, username, initial, avatarUrl: user.avatar_url || null });
+            if (!_routeMap[locId]) _routeMap[locId] = [];
+            _routeMap[locId].push({ pokemon: poke, username, initial, avatarUrl: user.avatar_url || null });
         };
 
         party.forEach(addPoke);
         boxes.forEach(box => (box.slots || []).forEach(addPoke));
     });
 
-    // Sort location IDs in game order
-    const locationIds = Object.keys(routeMap).map(Number).sort((a, b) => a - b);
+    // Sort location IDs in game order, filter out 0
+    const locationIds = Object.keys(_routeMap).map(Number).sort((a, b) => a - b);
+    _routeValidIds = locationIds.filter(id => id > 0);
 
-    // Filter out location 0 (unknown)
-    const validIds = locationIds.filter(id => id > 0);
-    if (countEl) countEl.textContent = validIds.length;
+    if (countEl) countEl.textContent = _routeValidIds.length;
 
-    if (validIds.length === 0) {
+    if (_routeValidIds.length === 0) {
         container.innerHTML = `
             <div class="no-data-msg"><span class="icon">🗺️</span><p>Sin datos de rutas aún</p></div>
         `;
         return;
     }
 
-    container.innerHTML = '';
+    // Build trainer filter bar
+    let filterHTML = `<div class="routes-filter-bar">
+        <span class="routes-filter-label">🔍 Entrenador:</span>
+        <div class="routes-filter-pills">
+            <button class="route-filter-pill active" data-trainer="all" onclick="applyRouteFilter('all')">Todos</button>`;
+    [...trainerNames].sort().forEach(name => {
+        filterHTML += `<button class="route-filter-pill" data-trainer="${escapeHtml(name)}" onclick="applyRouteFilter('${escapeHtml(name)}')">${escapeHtml(name)}</button>`;
+    });
+    filterHTML += `</div></div>`;
 
-    validIds.forEach(locId => {
-        const pokemonList = routeMap[locId];
-        const display = LOCATION_DISPLAY[locId];
-        const locName = display ? display.name : (KALOS_LOCATIONS[locId] || `Ubicación #${locId}`);
-        const locSub = display ? display.sub : '';
+    container.innerHTML = filterHTML;
+    _routeFilter = 'all';
 
-        const routeBox = document.createElement('div');
-        routeBox.className = 'route-box';
+    // Render route boxes
+    _routeValidIds.forEach(locId => {
+        container.appendChild(_buildRouteBox(locId));
+    });
+}
 
-        const headerHTML = `
-            <div class="route-header">
-                <div class="route-title">${locName}</div>
-                ${locSub ? `<div class="route-sub">${locSub}</div>` : ''}
-                <span class="route-count">${pokemonList.length}</span>
+function _buildRouteBox(locId) {
+    const allEntries = _routeMap[locId] || [];
+    const entries = _routeFilter === 'all'
+        ? allEntries
+        : allEntries.filter(e => e.username === _routeFilter);
+
+    const display = LOCATION_DISPLAY[locId];
+    const locName = display ? display.name : (KALOS_LOCATIONS[locId] || `Ubicación #${locId}`);
+    const locSub = display ? display.sub : '';
+    const isOpen = _openRoutes.has(locId);
+    const isHidden = entries.length === 0;
+
+    const routeBox = document.createElement('div');
+    routeBox.className = 'route-box' + (isHidden ? ' route-box-hidden' : '');
+    routeBox.id = `route-box-${locId}`;
+
+    // Header (always visible, acts as toggle)
+    const headerHTML = `
+        <div class="route-header route-header-toggle" onclick="toggleRoute(${locId})">
+            <div class="route-chevron${isOpen ? ' open' : ''}">▶</div>
+            <div class="route-title">${locName}</div>
+            ${locSub ? `<div class="route-sub">${locSub}</div>` : ''}
+            <span class="route-count">${entries.length}</span>
+        </div>
+    `;
+
+    // Grid (collapsed by default)
+    let slotsHTML = `<div class="route-grid-wrap${isOpen ? ' open' : ''}">`;
+    slotsHTML += '<div class="route-grid">';
+    entries.forEach(entry => {
+        const p = entry.pokemon;
+        const spriteUrl = getSpriteUrl(p.speciesId, p.isShiny);
+        const badgeContent = entry.avatarUrl
+            ? `<img src="${entry.avatarUrl}" class="avatar-circle-img" alt="" onerror="this.parentNode.textContent='${escapeHtml(entry.initial)}'">` 
+            : entry.initial;
+        slotsHTML += `
+            <div class="route-pokemon${p.isShiny ? ' shiny' : ''}" title="${escapeHtml(p.nickname || p.species)} Lv.${p.level} — ${escapeHtml(entry.username)}">
+                <div class="route-trainer-badge">${badgeContent}</div>
+                <img src="${spriteUrl}" alt="${escapeHtml(p.species)}" width="56" height="56" style="image-rendering:pixelated" onerror="this.src='${SPRITE_BASE}0.png'" loading="lazy" />
+                <div class="route-poke-name">${escapeHtml(p.nickname || p.species)}</div>
+                <div class="route-poke-level">Lv.${p.level || '?'}</div>
             </div>
         `;
+    });
+    slotsHTML += '</div></div>';
 
-        let slotsHTML = '<div class="route-grid">';
-        pokemonList.forEach(entry => {
-            const p = entry.pokemon;
-            const spriteUrl = getSpriteUrl(p.speciesId, p.isShiny);
-            // Route trainer badge: show avatar img or initial letter
-            const badgeContent = entry.avatarUrl
-                ? `<img src="${entry.avatarUrl}" class="avatar-circle-img" alt="" onerror="this.parentNode.textContent='${escapeHtml(entry.initial)}'">`
-                : entry.initial;
-            slotsHTML += `
-                <div class="route-pokemon${p.isShiny ? ' shiny' : ''}" title="${escapeHtml(p.nickname || p.species)} Lv.${p.level} — ${escapeHtml(entry.username)}">
-                    <div class="route-trainer-badge">${badgeContent}</div>
-                    <img src="${spriteUrl}" alt="${escapeHtml(p.species)}" width="56" height="56" style="image-rendering:pixelated" onerror="this.src='${SPRITE_BASE}0.png'" />
-                    <div class="route-poke-name">${escapeHtml(p.nickname || p.species)}</div>
-                    <div class="route-poke-level">Lv.${p.level || '?'}</div>
-                </div>
-            `;
-        });
-        slotsHTML += '</div>';
+    routeBox.innerHTML = headerHTML + slotsHTML;
+    return routeBox;
+}
 
-        routeBox.innerHTML = headerHTML + slotsHTML;
-        container.appendChild(routeBox);
+function toggleRoute(locId) {
+    if (_openRoutes.has(locId)) {
+        _openRoutes.delete(locId);
+    } else {
+        _openRoutes.add(locId);
+    }
+    // Re-render just this box
+    const existing = document.getElementById(`route-box-${locId}`);
+    if (existing) {
+        const newBox = _buildRouteBox(locId);
+        existing.replaceWith(newBox);
+    }
+}
+
+function applyRouteFilter(trainer) {
+    _routeFilter = trainer;
+
+    // Update pill active states
+    document.querySelectorAll('.route-filter-pill').forEach(pill => {
+        pill.classList.toggle('active', pill.dataset.trainer === trainer);
+    });
+
+    // Re-render all route boxes
+    _routeValidIds.forEach(locId => {
+        const existing = document.getElementById(`route-box-${locId}`);
+        if (existing) {
+            const newBox = _buildRouteBox(locId);
+            existing.replaceWith(newBox);
+        }
     });
 }
 
