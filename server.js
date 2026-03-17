@@ -34,6 +34,25 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'No save data provided' });
         }
 
+        // Protección: si el sync llega con 0 earned pero la BD ya tenía puntos mayores,
+        // significa que nuzlocke.json se perdió (ej: reinstalación) y no debemos reducir puntos.
+        let finalPoints = nuzlockePoints ?? 0;
+        let finalEarned = nuzlockePointsEarned ?? 0;
+        let finalSpent = nuzlockePointsSpent ?? 0;
+
+        if (finalEarned === 0) {
+            const prev = await pool.query(
+                'SELECT nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_spent FROM save_data WHERE user_id = $1',
+                [req.userId]
+            );
+            if (prev.rows.length > 0 && (prev.rows[0].nuzlocke_points_earned || 0) > 0) {
+                console.log(`[SYNC GUARD] ${req.username}: earned=0 pero BD tiene ${prev.rows[0].nuzlocke_points_earned} — conservando puntos de BD`);
+                finalPoints = prev.rows[0].nuzlocke_points;
+                finalEarned = prev.rows[0].nuzlocke_points_earned;
+                finalSpent = prev.rows[0].nuzlocke_points_spent;
+            }
+        }
+
         await pool.query(
             `INSERT INTO save_data (user_id, party, boxes, nuzlocke, trainer, nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_spent, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
@@ -53,9 +72,9 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
                 JSON.stringify(boxes || []),
                 JSON.stringify(nuzlocke || { deaths: [], enabled: true }),
                 JSON.stringify(trainer || {}),
-                nuzlockePoints ?? 0,
-                nuzlockePointsEarned ?? 0,
-                nuzlockePointsSpent ?? 0
+                finalPoints,
+                finalEarned,
+                finalSpent
             ]
         );
 
@@ -65,6 +84,7 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
         console.error('Sync error:', err);
         res.status(500).json({ error: 'Error al sincronizar' });
     }
+
 });
 
 // ===================== PUBLIC DASHBOARD API =====================
