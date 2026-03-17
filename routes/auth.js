@@ -190,4 +190,23 @@ router.put('/password', authMiddleware, async (req, res) => {
     }
 });
 
+// GET /api/auth/nuzlocke — devuelve el nuzlocke almacenado en BD para el usuario autenticado
+// Usado por la app de escritorio al arrancar para restaurar nuzlocke.json si se ha perdido
+router.get('/nuzlocke', authMiddleware, async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT nuzlocke FROM save_data WHERE user_id = $1',
+            [req.userId]
+        );
+        if (result.rows.length === 0 || !result.rows[0].nuzlocke) {
+            return res.json(null);
+        }
+        res.json(result.rows[0].nuzlocke);
+    } catch (err) {
+        console.error('Error fetching nuzlocke:', err);
+        res.status(500).json({ error: 'Error al obtener nuzlocke' });
+    }
+});
+
 module.exports = router;
+
