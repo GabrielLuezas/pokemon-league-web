@@ -323,6 +323,33 @@ function switchDetailTab(tab) {
     document.getElementById('tab-pokemon').style.display = tab === 'pokemon' ? 'block' : 'none';
 }
 
+/**
+ * Auto-detect whether DB values are raw counts (new app v1.7.1+) or pre-multiplied (old app).
+ * Raw counts: earned ≤ 100 (max ~60 challenges), deaths ≤ reasonable count.
+ * Pre-multiplied: earned is already multiplied by 100 (e.g. 5700).
+ * Returns { displayEarned, displayDeaths, displaySpent, displayPoints }.
+ */
+function getNuzlockePointsDisplay(user, fallbackDeaths) {
+    const earned = user.nuzlocke_points_earned ?? 0;
+    const deaths = user.nuzlocke_points_deaths ?? fallbackDeaths ?? 0;
+    const spent  = user.nuzlocke_points_spent  ?? 0;
+
+    // Heuristic: if earned ≤ 100, it's a raw challenge count (new format).
+    // No player can complete more than ~60 challenges.
+    // If earned > 100, it's pre-multiplied (old format, e.g. 5700).
+    const isRawFormat = earned <= 100;
+
+    const displayEarned = isRawFormat ? earned * 100 : earned;
+    const displayDeaths = isRawFormat ? deaths * 50  : deaths;
+    const displaySpent  = spent;
+    // Use nuzlocke_points as source of truth for total when available
+    const displayPoints = user.nuzlocke_points != null
+        ? user.nuzlocke_points
+        : displayEarned - displayDeaths - displaySpent;
+
+    return { displayEarned, displayDeaths, displaySpent, displayPoints };
+}
+
 function renderActualContent(user) {
     const container = document.getElementById('actual-content');
     if (!container) return;
@@ -342,17 +369,9 @@ function renderActualContent(user) {
     const money = (trainer.money || 0).toLocaleString();
     const badgeCount = trainer.badgeCount || badges.filter(Boolean).length;
 
-    // Points calculation using the 3 DB columns (raw counts) for accuracy
+    // Points: auto-detect raw counts vs pre-multiplied, use nuzlocke_points as total
     const stats = getTrainerStats(user);
-    // Raw counts from DB — desktop sends challengeCount and deaths, not multiplied values
-    const rawChallenges  = user.nuzlocke_points_earned  ?? 0;
-    const rawDeaths      = user.nuzlocke_points_deaths  ?? stats.deaths;
-    const rawSpent       = user.nuzlocke_points_spent   ?? 0;
-    const displayEarned  = rawChallenges * 100;
-    const displayDeaths  = rawDeaths * 50;
-    const displaySpent   = rawSpent;
-    // Total = earned minus deaths penalty minus spent
-    const displayPoints  = displayEarned - displayDeaths - displaySpent;
+    const { displayEarned, displayDeaths, displaySpent, displayPoints } = getNuzlockePointsDisplay(user, stats.deaths);
 
     const badgesHTML = KALOS_BADGES.map((badge, i) => {
         const earned = badges[i] || false;
@@ -1001,14 +1020,16 @@ function switchRankingTab(tab) {
 function renderRankings() {
     if (!allUsers || allUsers.length === 0) return;
 
-    const stats = allUsers.map(user => ({
-        user,
-        ...getTrainerStats(user),
-        // displayPoints = challenges*100 - deaths*50 - spent (raw counts from DB)
-        displayPoints: ((user.nuzlocke_points_earned ?? 0) * 100)
-                     - ((user.nuzlocke_points_deaths ?? 0) * 50)
-                     - (user.nuzlocke_points_spent  ?? 0),
-    }));
+    const stats = allUsers.map(user => {
+        const ts = getTrainerStats(user);
+        const pts = getNuzlockePointsDisplay(user, ts.deaths);
+        return {
+            user,
+            ...ts,
+            // Use nuzlocke_points (always correct) with auto-detect fallback
+            displayPoints: pts.displayPoints,
+        };
+    });
 
     // Get logged-in username from localStorage (set by auth)
     const loggedUsername = localStorage.getItem('username') || null;
