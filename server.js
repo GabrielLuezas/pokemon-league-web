@@ -28,7 +28,7 @@ app.use('/api/tournament', tournamentRoutes);
 app.post('/api/sync', authMiddleware, async (req, res) => {
     try {
         const { party, boxes, nuzlocke, trainer, nuzlockePoints, nuzlockePointsEarned, nuzlockePointsDeath, nuzlockePointsSpent } = req.body;
-        console.log(`[DEBUG] Syncing points -> Earned: ${nuzlockePointsEarned}, Deaths: ${nuzlockePointsDeath}, Spent: ${nuzlockePointsSpent}, Total: ${nuzlockePoints}`);
+        console.log(`[DEBUG] Syncing points (raw) -> Challenges: ${nuzlockePointsEarned}, Deaths: ${nuzlockePointsDeath}, Spent: ${nuzlockePointsSpent}, Total: ${nuzlockePoints}`);
 
         if (!party && !boxes) {
             return res.status(400).json({ error: 'No save data provided' });

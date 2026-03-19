@@ -342,12 +342,15 @@ function renderActualContent(user) {
     const money = (trainer.money || 0).toLocaleString();
     const badgeCount = trainer.badgeCount || badges.filter(Boolean).length;
 
-    // Points calculation using the 3 DB columns for accuracy
+    // Points calculation using the 3 DB columns (raw counts) for accuracy
     const stats = getTrainerStats(user);
-    // earned, deaths penalty and spent come directly from DB (sent by desktop on every save)
-    const displayEarned  = user.nuzlocke_points_earned  ?? 0;
-    const displayDeaths  = user.nuzlocke_points_deaths  ?? (stats.deaths * 50);
-    const displaySpent   = user.nuzlocke_points_spent   ?? 0;
+    // Raw counts from DB — desktop sends challengeCount and deaths, not multiplied values
+    const rawChallenges  = user.nuzlocke_points_earned  ?? 0;
+    const rawDeaths      = user.nuzlocke_points_deaths  ?? stats.deaths;
+    const rawSpent       = user.nuzlocke_points_spent   ?? 0;
+    const displayEarned  = rawChallenges * 100;
+    const displayDeaths  = rawDeaths * 50;
+    const displaySpent   = rawSpent;
     // Total = earned minus deaths penalty minus spent
     const displayPoints  = displayEarned - displayDeaths - displaySpent;
 
@@ -1001,9 +1004,9 @@ function renderRankings() {
     const stats = allUsers.map(user => ({
         user,
         ...getTrainerStats(user),
-        // displayPoints = earned - deaths - spent (same formula as trainer detail)
-        displayPoints: (user.nuzlocke_points_earned ?? 0)
-                     - (user.nuzlocke_points_deaths ?? 0)
+        // displayPoints = challenges*100 - deaths*50 - spent (raw counts from DB)
+        displayPoints: ((user.nuzlocke_points_earned ?? 0) * 100)
+                     - ((user.nuzlocke_points_deaths ?? 0) * 50)
                      - (user.nuzlocke_points_spent  ?? 0),
     }));
 
