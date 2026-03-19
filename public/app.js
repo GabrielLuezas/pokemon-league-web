@@ -342,10 +342,8 @@ function getNuzlockePointsDisplay(user, fallbackDeaths) {
     const displayEarned = isRawFormat ? earned * 100 : earned;
     const displayDeaths = isRawFormat ? deaths * 50  : deaths;
     const displaySpent  = spent;
-    // Use nuzlocke_points as source of truth for total when available
-    const displayPoints = user.nuzlocke_points != null
-        ? user.nuzlocke_points
-        : displayEarned - displayDeaths - displaySpent;
+    // Always compute from raw values to ensure accuracy
+    const displayPoints = displayEarned - displayDeaths - displaySpent;
 
     return { displayEarned, displayDeaths, displaySpent, displayPoints };
 }
