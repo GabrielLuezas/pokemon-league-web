@@ -27,8 +27,8 @@ app.use('/api/tournament', tournamentRoutes);
 
 app.post('/api/sync', authMiddleware, async (req, res) => {
     try {
-        const { party, boxes, nuzlocke, trainer, nuzlockePoints, nuzlockePointsEarned, nuzlockePointsSpent } = req.body;
-        console.log(`[DEBUG] Syncing points -> Earned: ${nuzlockePointsEarned}, Spent: ${nuzlockePointsSpent}, Total: ${nuzlockePoints}`);
+        const { party, boxes, nuzlocke, trainer, nuzlockePoints, nuzlockePointsEarned, nuzlockePointsDeath, nuzlockePointsSpent } = req.body;
+        console.log(`[DEBUG] Syncing points -> Earned: ${nuzlockePointsEarned}, Deaths: ${nuzlockePointsDeath}, Spent: ${nuzlockePointsSpent}, Total: ${nuzlockePoints}`);
 
         if (!party && !boxes) {
             return res.status(400).json({ error: 'No save data provided' });
@@ -38,24 +38,26 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
         // significa que nuzlocke.json se perdió (ej: reinstalación) y no debemos reducir puntos.
         let finalPoints = nuzlockePoints ?? 0;
         let finalEarned = nuzlockePointsEarned ?? 0;
-        let finalSpent = nuzlockePointsSpent ?? 0;
+        let finalDeath  = nuzlockePointsDeath  ?? 0;
+        let finalSpent  = nuzlockePointsSpent  ?? 0;
 
         if (finalEarned === 0) {
             const prev = await pool.query(
-                'SELECT nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_spent FROM save_data WHERE user_id = $1',
+                'SELECT nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_deaths, nuzlocke_points_spent FROM save_data WHERE user_id = $1',
                 [req.userId]
             );
             if (prev.rows.length > 0 && (prev.rows[0].nuzlocke_points_earned || 0) > 0) {
                 console.log(`[SYNC GUARD] ${req.username}: earned=0 pero BD tiene ${prev.rows[0].nuzlocke_points_earned} — conservando puntos de BD`);
                 finalPoints = prev.rows[0].nuzlocke_points;
                 finalEarned = prev.rows[0].nuzlocke_points_earned;
-                finalSpent = prev.rows[0].nuzlocke_points_spent;
+                finalDeath  = prev.rows[0].nuzlocke_points_deaths;
+                finalSpent  = prev.rows[0].nuzlocke_points_spent;
             }
         }
 
         await pool.query(
-            `INSERT INTO save_data (user_id, party, boxes, nuzlocke, trainer, nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_spent, updated_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            `INSERT INTO save_data (user_id, party, boxes, nuzlocke, trainer, nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_deaths, nuzlocke_points_spent, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
              ON CONFLICT (user_id)
              DO UPDATE SET
                 party = COALESCE($2, save_data.party),
@@ -64,7 +66,8 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
                 trainer = COALESCE($5, save_data.trainer),
                 nuzlocke_points = $6,
                 nuzlocke_points_earned = $7,
-                nuzlocke_points_spent = $8,
+                nuzlocke_points_deaths = $8,
+                nuzlocke_points_spent = $9,
                 updated_at = NOW()`,
             [
                 req.userId,
@@ -74,6 +77,7 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
                 JSON.stringify(trainer || {}),
                 finalPoints,
                 finalEarned,
+                finalDeath,
                 finalSpent
             ]
         );
@@ -104,6 +108,7 @@ app.get('/api/users', async (req, res) => {
                 sd.trainer,
                 sd.nuzlocke_points,
                 sd.nuzlocke_points_earned,
+                sd.nuzlocke_points_deaths,
                 sd.nuzlocke_points_spent,
                 sd.updated_at
             FROM users u
@@ -131,6 +136,7 @@ app.get('/api/users/:id', async (req, res) => {
                 sd.trainer,
                 sd.nuzlocke_points,
                 sd.nuzlocke_points_earned,
+                sd.nuzlocke_points_deaths,
                 sd.nuzlocke_points_spent,
                 sd.updated_at
             FROM users u

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS public.save_data (
     nuzlocke_points       INTEGER DEFAULT 0,
     nuzlocke_points_earned INTEGER DEFAULT 0,
     nuzlocke_points_spent  INTEGER DEFAULT 0,
+    nuzlocke_points_deaths INTEGER DEFAULT 0,
     updated_at            TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

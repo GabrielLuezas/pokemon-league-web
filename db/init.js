@@ -29,6 +29,7 @@ async function initDB() {
                 nuzlocke_points INTEGER DEFAULT 0,
                 nuzlocke_points_earned INTEGER DEFAULT 0,
                 nuzlocke_points_spent INTEGER DEFAULT 0,
+                nuzlocke_points_deaths INTEGER DEFAULT 0,
                 updated_at TIMESTAMP DEFAULT NOW()
             );
         `);
@@ -51,6 +52,11 @@ async function initDB() {
         // Add nuzlocke_points_spent column if table already exists without it
         await client.query(`
             ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points_spent INTEGER DEFAULT 0;
+        `);
+
+        // Add nuzlocke_points_deaths column if table already exists without it
+        await client.query(`
+            ALTER TABLE save_data ADD COLUMN IF NOT EXISTS nuzlocke_points_deaths INTEGER DEFAULT 0;
         `);
 
         // Add tournament table for the Triple Elimination Bracket

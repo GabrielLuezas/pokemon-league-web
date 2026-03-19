@@ -342,16 +342,14 @@ function renderActualContent(user) {
     const money = (trainer.money || 0).toLocaleString();
     const badgeCount = trainer.badgeCount || badges.filter(Boolean).length;
 
-    // Points & challenges calculation
+    // Points calculation using the 3 DB columns for accuracy
     const stats = getTrainerStats(user);
-    const deathPenalty = stats.deaths * 50;
-    const displayPoints = user.nuzlocke_points != null ? user.nuzlocke_points : stats.points;
-    const displayEarned = user.nuzlocke_points_earned != null ? user.nuzlocke_points_earned : 0;
-    // Spent: use DB value if available, otherwise derive from: earned - penalty - total
-    const dbSpent = user.nuzlocke_points_spent || 0;
-    const derivedSpent = Math.max(0, displayEarned - deathPenalty - displayPoints);
-    const displaySpent = dbSpent > 0 ? dbSpent : derivedSpent;
-    const displayPenalty = deathPenalty;
+    // earned, deaths penalty and spent come directly from DB (sent by desktop on every save)
+    const displayEarned  = user.nuzlocke_points_earned  ?? 0;
+    const displayDeaths  = user.nuzlocke_points_deaths  ?? (stats.deaths * 50);
+    const displaySpent   = user.nuzlocke_points_spent   ?? 0;
+    // Total = earned minus deaths penalty minus spent
+    const displayPoints  = displayEarned - displayDeaths - displaySpent;
 
     const badgesHTML = KALOS_BADGES.map((badge, i) => {
         const earned = badges[i] || false;
@@ -408,11 +406,11 @@ function renderActualContent(user) {
             <div class="detail-points-total">${displayPoints}</div>
             <div class="detail-points-badges">
                 <span class="points-badge earned">+${displayEarned}</span>
-                ${displayPenalty > 0 ? `<span class="points-badge penalty">-${displayPenalty}</span>` : ''}
+                ${displayDeaths > 0 ? `<span class="points-badge penalty">-${displayDeaths} muertes</span>` : ''}
                 ${displaySpent  > 0 ? `<span class="points-badge spent">-${displaySpent} gastados</span>` : ''}
             </div>
             <div class="detail-points-breakdown">
-                ${stats.deaths > 0 ? `<div class="detail-points-item penalty">💀 Muertes: ${stats.deaths} (-50 c/u)</div>` : ''}
+                ${displayDeaths > 0 ? `<div class="detail-points-item penalty">💀 Penalidad muertes: -${displayDeaths}</div>` : ''}
                 ${displaySpent > 0 ? `<div class="detail-points-item spent">🛒 Gastados en tienda: -${displaySpent}</div>` : ''}
             </div>
             ${stats.shinys > 0 ? `<div class="detail-points-shiny">✨ Shinys encontrados: ${stats.shinys}</div>` : ''}
@@ -1003,7 +1001,10 @@ function renderRankings() {
     const stats = allUsers.map(user => ({
         user,
         ...getTrainerStats(user),
-        displayPoints: user.nuzlocke_points != null ? user.nuzlocke_points : 0,
+        // displayPoints = earned - deaths - spent (same formula as trainer detail)
+        displayPoints: (user.nuzlocke_points_earned ?? 0)
+                     - (user.nuzlocke_points_deaths ?? 0)
+                     - (user.nuzlocke_points_spent  ?? 0),
     }));
 
     // Get logged-in username from localStorage (set by auth)
