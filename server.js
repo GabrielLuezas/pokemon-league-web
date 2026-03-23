@@ -55,6 +55,31 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
             }
         }
 
+        // Protección: si el nuzlocke que llega está vacío (sin muertes, sin compras, sin tiradas)
+        // pero la BD ya tiene datos, conservar el nuzlocke de la BD (evita que una reinstalación borre las tiradas de gacha)
+        let finalNuzlocke = nuzlocke || { deaths: [], enabled: true };
+        const incomingDeaths = (finalNuzlocke.deaths || []).length;
+        const incomingPurchases = (finalNuzlocke.purchases || []).length;
+        const incomingGacha = (finalNuzlocke.gachaPulls || []).length;
+        const incomingIsEmpty = incomingDeaths === 0 && incomingPurchases === 0 && incomingGacha === 0;
+
+        if (incomingIsEmpty) {
+            const prevNuz = await pool.query(
+                'SELECT nuzlocke FROM save_data WHERE user_id = $1',
+                [req.userId]
+            );
+            if (prevNuz.rows.length > 0 && prevNuz.rows[0].nuzlocke) {
+                const dbNuz = prevNuz.rows[0].nuzlocke;
+                const dbHasData = (dbNuz.deaths || []).length > 0 ||
+                                  (dbNuz.purchases || []).length > 0 ||
+                                  (dbNuz.gachaPulls || []).length > 0;
+                if (dbHasData) {
+                    console.log(`[SYNC GUARD] ${req.username}: nuzlocke vacío pero BD tiene datos — conservando nuzlocke de BD`);
+                    finalNuzlocke = dbNuz;
+                }
+            }
+        }
+
         await pool.query(
             `INSERT INTO save_data (user_id, party, boxes, nuzlocke, trainer, nuzlocke_points, nuzlocke_points_earned, nuzlocke_points_deaths, nuzlocke_points_spent, updated_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
@@ -73,7 +98,7 @@ app.post('/api/sync', authMiddleware, async (req, res) => {
                 req.userId,
                 JSON.stringify(party || []),
                 JSON.stringify(boxes || []),
-                JSON.stringify(nuzlocke || { deaths: [], enabled: true }),
+                JSON.stringify(finalNuzlocke),
                 JSON.stringify(trainer || {}),
                 finalPoints,
                 finalEarned,

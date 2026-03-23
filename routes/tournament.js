@@ -44,6 +44,8 @@ function countFeedMatches(state, targetMatchId) {
             }
         }
     }
+    // Also check semifinals/grandFinal
+    if (state.semifinals && state.semifinals.nextMatchId === targetMatchId && state.semifinals.status !== 'completed') count++;
     return count;
 }
 
@@ -95,6 +97,20 @@ router.get('/', async (req, res) => {
     catch (err) { console.error(err); res.status(500).json({ error: 'Error' }); }
 });
 
+// GET /api/tournament/players — List all registered users for admin selection
+router.get('/players', authMiddleware, async (req, res) => {
+    try {
+        if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())
+            return res.status(403).json({ error: 'No autorizado' });
+
+        const result = await pool.query('SELECT id, username, avatar_url FROM users ORDER BY username ASC');
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching players:', err);
+        res.status(500).json({ error: 'Error obteniendo jugadores' });
+    }
+});
+
 router.get('/my-matches', authMiddleware, async (req, res) => {
     try {
         const state = await getTournamentState();
@@ -132,20 +148,39 @@ router.get('/my-matches', authMiddleware, async (req, res) => {
 });
 
 // POST /api/tournament/generate
+// Accepts optional { playerIds: [id1, id2, ...] } to use specific players in order.
+// If playerIds is not provided, falls back to all registered users (shuffled).
 router.post('/generate', authMiddleware, async (req, res) => {
     try {
         if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())
             return res.status(403).json({ error: 'No autorizado' });
 
-        const usersResult = await pool.query('SELECT id, username, avatar_url FROM users');
-        const users = usersResult.rows;
-        if (users.length < 2) return res.status(400).json({ error: 'Se necesitan al menos 2 jugadores' });
+        let users;
+        const { playerIds } = req.body || {};
 
-        // Shuffle
-        for (let i = users.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [users[i], users[j]] = [users[j], users[i]];
+        if (playerIds && Array.isArray(playerIds) && playerIds.length >= 2) {
+            // Admin selected specific players in specific order
+            const placeholders = playerIds.map((_, i) => `$${i + 1}`).join(',');
+            const usersResult = await pool.query(
+                `SELECT id, username, avatar_url FROM users WHERE id IN (${placeholders})`,
+                playerIds
+            );
+            // Preserve admin-specified order
+            const userMap = {};
+            usersResult.rows.forEach(u => { userMap[u.id] = u; });
+            users = playerIds.map(id => userMap[id]).filter(Boolean);
+        } else {
+            // Fallback: all registered users, shuffled
+            const usersResult = await pool.query('SELECT id, username, avatar_url FROM users');
+            users = usersResult.rows;
+            // Shuffle
+            for (let i = users.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [users[i], users[j]] = [users[j], users[i]];
+            }
         }
+
+        if (users.length < 2) return res.status(400).json({ error: 'Se necesitan al menos 2 jugadores' });
 
         const n = users.length;
         const numUBRounds = Math.ceil(Math.log2(n));
@@ -199,7 +234,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
         }
 
         // ========== MIDDLE BRACKET ==========
-        // Same structure as double-elim losers bracket, but losers go to Lower
+        // Losers from Upper fall here. Losers from Middle fall to Lower.
         const numMidRounds = numUBRounds >= 2 ? 2 * (numUBRounds - 1) : 0;
         const allMiddleMatches = [];
 
@@ -224,7 +259,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
                 else if (isMinor) nextMId = `m${mr + 1}_m${m}`;
                 else nextMId = `m${mr + 1}_m${Math.ceil(m / 2)}`;
 
-                const match = makeMatch(mId, nextMId, null); // loserDest set later
+                const match = makeMatch(mId, nextMId, null); // loserDest set below
                 round.push(match);
                 allMiddleMatches.push(match);
             }
@@ -232,13 +267,13 @@ router.post('/generate', authMiddleware, async (req, res) => {
         }
 
         // ========== LOWER BRACKET ==========
+        // Losers from Middle fall here. Losers from Lower are ELIMINATED (2nd loss).
         const totalMidMatches = allMiddleMatches.length;
 
         if (totalMidMatches >= 2) {
             const lowerSlots = nextPow2(totalMidMatches);
             const numLBRounds = Math.round(Math.log2(lowerSlots));
 
-            // Create Lower tree
             let lbPrevCount = lowerSlots / 2;
             for (let lr = 0; lr < numLBRounds; lr++) {
                 const numM = lr === 0 ? lowerSlots / 2 : Math.ceil(lbPrevCount / 2);
@@ -247,6 +282,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
                     const mId = `l${lr}_m${m}`;
                     const isLBFinal = lr === numLBRounds - 1 && numM === 1;
                     const nextMId = isLBFinal ? 'gf_semi' : `l${lr + 1}_m${Math.ceil(m / 2)}`;
+                    // Losers from Lower are eliminated (no loserDest = null)
                     round.push(makeMatch(mId, nextMId, null));
                 }
                 state.lower.rounds.push(round);
@@ -256,14 +292,21 @@ router.post('/generate', authMiddleware, async (req, res) => {
             // Assign Middle match loserDests → Lower R0 slots
             for (let i = 0; i < allMiddleMatches.length; i++) {
                 const lowerR0Match = Math.floor(i / 2) + 1;
-                allMiddleMatches[i].loserDest = { matchId: `l0_m${lowerR0Match}` };
+                if (state.lower.rounds.length > 0 && lowerR0Match <= state.lower.rounds[0].length) {
+                    allMiddleMatches[i].loserDest = { matchId: `l0_m${lowerR0Match}` };
+                }
+                // else: loser eliminated (null loserDest stays)
             }
         } else if (totalMidMatches === 1) {
-            // Only 1 Middle match → loser goes directly to semifinals as LB "champion"
-            allMiddleMatches[0].loserDest = null; // eliminated (no Lower bracket needed)
+            // Only 1 middle match: loser is eliminated (2nd loss) — no Lower bracket needed.
+            // The single Middle match loser has already lost once (from Upper) and now loses
+            // again in Middle = 2 losses = eliminated. This is correct.
+            allMiddleMatches[0].loserDest = null;
         }
 
         // ========== FINALS ==========
+        // Semifinals: Middle champion vs Lower champion (if Lower exists).
+        // Grand Final: Upper champion vs Semifinals winner.
         state.semifinals = makeMatch('gf_semi', 'gf_final', null);
         state.grandFinal = makeMatch('gf_final', null, null);
 

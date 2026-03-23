@@ -2108,29 +2108,6 @@ async function reportResult(matchId, myScore, enemyScore) {
     }
 }
 
-async function adminGenerateTournament() {
-    if (!authToken) return;
-    if (!confirm('¿Generar un nuevo torneo? Esto reemplazará el torneo actual.')) return;
-
-    try {
-        const res = await fetch('/api/tournament/generate', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            }
-        });
-        const data = await res.json();
-        if (!res.ok) {
-            alert(data.error || 'Error');
-            return;
-        }
-        loadTournament();
-    } catch (err) {
-        alert('Error de conexión');
-    }
-}
-
 async function adminOverrideMatch(matchId, p1Wins, p2Wins) {
     if (!authToken) return;
     if (!confirm(`¿Forzar resultado ${p1Wins} - ${p2Wins}?`)) return;
@@ -2151,6 +2128,214 @@ async function adminOverrideMatch(matchId, p1Wins, p2Wins) {
         }
         loadTournament();
         loadMyMatches();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+// ===================== TOURNAMENT CREATOR (Admin Drag & Drop) =====================
+
+let tcAvailablePlayers = [];
+let tcSelectedPlayers = [];
+let tcDraggedPlayerId = null;
+let tcDragSource = null; // 'available' or 'selected'
+
+function toggleTournamentCreator() {
+    const panel = document.getElementById('tournament-creator');
+    const isHidden = panel.style.display === 'none';
+    panel.style.display = isHidden ? '' : 'none';
+    if (isHidden) loadTournamentPlayers();
+}
+
+async function loadTournamentPlayers() {
+    if (!authToken) return;
+    try {
+        const res = await fetch('/api/tournament/players', {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (!res.ok) return;
+        const players = await res.json();
+        // Place all in available, keep existing selected if any
+        const selectedIds = new Set(tcSelectedPlayers.map(p => p.id));
+        tcAvailablePlayers = players.filter(p => !selectedIds.has(p.id));
+        // Keep only selected players that still exist
+        const allIds = new Set(players.map(p => p.id));
+        tcSelectedPlayers = tcSelectedPlayers.filter(p => allIds.has(p.id));
+        tcRenderBothLists();
+    } catch (err) {
+        console.error('Error loading players:', err);
+    }
+}
+
+function tcRenderBothLists() {
+    tcRenderList('tc-available-list', tcAvailablePlayers, 'available');
+    tcRenderList('tc-selected-list', tcSelectedPlayers, 'selected');
+    document.getElementById('tc-available-count').textContent = tcAvailablePlayers.length;
+    document.getElementById('tc-selected-count').textContent = tcSelectedPlayers.length;
+    document.getElementById('tc-generate-count').textContent = tcSelectedPlayers.length;
+
+    const genBtn = document.getElementById('tc-generate-btn');
+    genBtn.disabled = tcSelectedPlayers.length < 2;
+
+    // Show/hide placeholders
+    document.getElementById('tc-available-placeholder').style.display = tcAvailablePlayers.length === 0 ? '' : 'none';
+    document.getElementById('tc-selected-placeholder').style.display = tcSelectedPlayers.length === 0 ? '' : 'none';
+}
+
+function tcRenderList(containerId, players, listType) {
+    const container = document.getElementById(containerId);
+    let html = '';
+    players.forEach((p, idx) => {
+        const initial = p.username.charAt(0).toUpperCase();
+        const avatarHtml = p.avatar_url
+            ? `<img src="${p.avatar_url}" class="avatar-circle-img" alt="${initial}" onerror="this.parentNode.textContent='${initial}'">`
+            : initial;
+        const seedBadge = listType === 'selected' ? `<span class="tc-seed">#${idx + 1}</span>` : '';
+        html += `
+            <div class="tc-player-card"
+                 draggable="true"
+                 data-player-id="${p.id}"
+                 data-list-type="${listType}"
+                 ondragstart="tcDragStart(event, ${p.id}, '${listType}')"
+                 ondragend="tcDragEnd(event)"
+                 onclick="tcClickTransfer(${p.id}, '${listType}')">
+                <div class="tc-player-avatar">${avatarHtml}</div>
+                <span class="tc-player-name">${escapeHtml(p.username)}</span>
+                ${seedBadge}
+                <span class="tc-transfer-icon">${listType === 'available' ? '→' : '←'}</span>
+            </div>`;
+    });
+    container.innerHTML = html;
+}
+
+function tcClickTransfer(playerId, fromList) {
+    if (fromList === 'available') {
+        const idx = tcAvailablePlayers.findIndex(p => p.id === playerId);
+        if (idx === -1) return;
+        const [player] = tcAvailablePlayers.splice(idx, 1);
+        tcSelectedPlayers.push(player);
+    } else {
+        const idx = tcSelectedPlayers.findIndex(p => p.id === playerId);
+        if (idx === -1) return;
+        const [player] = tcSelectedPlayers.splice(idx, 1);
+        tcAvailablePlayers.push(player);
+        tcAvailablePlayers.sort((a, b) => a.username.localeCompare(b.username));
+    }
+    tcRenderBothLists();
+}
+
+function tcDragStart(e, playerId, source) {
+    tcDraggedPlayerId = playerId;
+    tcDragSource = source;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', playerId);
+    e.target.classList.add('tc-dragging');
+}
+
+function tcDragEnd(e) {
+    e.target.classList.remove('tc-dragging');
+    document.querySelectorAll('.tc-drop-zone').forEach(z => z.classList.remove('tc-drag-over'));
+    tcDraggedPlayerId = null;
+    tcDragSource = null;
+}
+
+function tcDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('tc-drag-over');
+}
+
+function tcDragLeave(e) {
+    e.currentTarget.classList.remove('tc-drag-over');
+}
+
+function tcDropToAvailable(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('tc-drag-over');
+    if (tcDragSource === 'selected' && tcDraggedPlayerId !== null) {
+        tcClickTransfer(tcDraggedPlayerId, 'selected');
+    }
+}
+
+function tcDropToSelected(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('tc-drag-over');
+    if (tcDragSource === 'available' && tcDraggedPlayerId !== null) {
+        tcClickTransfer(tcDraggedPlayerId, 'available');
+    }
+}
+
+function tcSelectAll() {
+    tcSelectedPlayers = tcSelectedPlayers.concat(tcAvailablePlayers);
+    tcAvailablePlayers = [];
+    tcRenderBothLists();
+}
+
+function tcClearAll() {
+    tcAvailablePlayers = tcAvailablePlayers.concat(tcSelectedPlayers);
+    tcSelectedPlayers = [];
+    tcAvailablePlayers.sort((a, b) => a.username.localeCompare(b.username));
+    tcRenderBothLists();
+}
+
+function tcShuffleSelected() {
+    for (let i = tcSelectedPlayers.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tcSelectedPlayers[i], tcSelectedPlayers[j]] = [tcSelectedPlayers[j], tcSelectedPlayers[i]];
+    }
+    tcRenderBothLists();
+}
+
+async function adminGenerateTournament() {
+    if (!authToken) return;
+    if (tcSelectedPlayers.length < 2) {
+        alert('Necesitas al menos 2 jugadores seleccionados.');
+        return;
+    }
+    if (!confirm(`¿Generar un nuevo torneo con ${tcSelectedPlayers.length} jugadores? Esto reemplazará el torneo actual.`)) return;
+
+    const playerIds = tcSelectedPlayers.map(p => p.id);
+
+    try {
+        const res = await fetch('/api/tournament/generate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ playerIds })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error');
+            return;
+        }
+        // Close creator panel and reload bracket
+        document.getElementById('tournament-creator').style.display = 'none';
+        loadTournament();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+async function adminResetTournament() {
+    if (!authToken) return;
+    if (!confirm('¿Estás seguro de que quieres RESETEAR el torneo actual? Se perderán todos los resultados.')) return;
+
+    try {
+        const res = await fetch('/api/tournament/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error');
+            return;
+        }
+        loadTournament();
     } catch (err) {
         alert('Error de conexión');
     }

@@ -517,15 +517,79 @@
           <div
             class="bracket-admin-panel"
             id="bracket-admin-panel"
-            style="display: none; text-align: right; margin-bottom: 16px"
+            style="display: none; margin-bottom: 24px"
           >
+            <!-- Toggle Button -->
             <button
-              class="auth-btn"
-              style="background: var(--accent-gold); color: #000"
-              onclick="adminGenerateTournament()"
+              class="admin-toggle-btn"
+              id="admin-toggle-btn"
+              onclick="toggleTournamentCreator()"
             >
-              ⚙️ Admin: Generar Torneo
+              ⚙️ Admin: Crear Torneo
             </button>
+
+            <!-- Tournament Creator Panel (hidden by default) -->
+            <div class="tournament-creator" id="tournament-creator" style="display: none">
+              <h3 class="tc-title">🏆 Crear Torneo — Seleccionar Jugadores</h3>
+              <p class="tc-hint">Arrastra jugadores al bombo para incluirlos en el torneo. El orden en el bombo determina los emparejamientos (seeds).</p>
+
+              <div class="tc-actions">
+                <button class="tc-action-btn" onclick="tcSelectAll()" title="Añadir todos">✅ Todos</button>
+                <button class="tc-action-btn" onclick="tcClearAll()" title="Quitar todos">🗑️ Vaciar</button>
+                <button class="tc-action-btn" onclick="tcShuffleSelected()" title="Mezclar orden">🔀 Mezclar</button>
+              </div>
+
+              <div class="tc-columns">
+                <!-- Available Players Pool -->
+                <div class="tc-pool">
+                  <div class="tc-pool-header">
+                    <span>👥 Jugadores Disponibles</span>
+                    <span class="tc-count" id="tc-available-count">0</span>
+                  </div>
+                  <div
+                    class="tc-drop-zone"
+                    id="tc-available-zone"
+                    ondragover="tcDragOver(event)"
+                    ondrop="tcDropToAvailable(event)"
+                    ondragleave="tcDragLeave(event)"
+                  >
+                    <div class="tc-player-list" id="tc-available-list"></div>
+                    <div class="tc-drop-placeholder" id="tc-available-placeholder">
+                      Arrastra aquí para quitar del bombo
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Selected Players (Bombo) -->
+                <div class="tc-pool tc-pool-selected">
+                  <div class="tc-pool-header">
+                    <span>🎯 Bombo (Seleccionados)</span>
+                    <span class="tc-count tc-count-active" id="tc-selected-count">0</span>
+                  </div>
+                  <div
+                    class="tc-drop-zone tc-drop-zone-selected"
+                    id="tc-selected-zone"
+                    ondragover="tcDragOver(event)"
+                    ondrop="tcDropToSelected(event)"
+                    ondragleave="tcDragLeave(event)"
+                  >
+                    <div class="tc-player-list" id="tc-selected-list"></div>
+                    <div class="tc-drop-placeholder" id="tc-selected-placeholder">
+                      Arrastra jugadores aquí para añadirlos al torneo
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tc-bottom-actions">
+                <button class="tc-generate-btn" id="tc-generate-btn" onclick="adminGenerateTournament()" disabled>
+                  🏆 Generar Torneo (<span id="tc-generate-count">0</span> jugadores)
+                </button>
+                <button class="tc-reset-btn" onclick="adminResetTournament()">
+                  🗑️ Resetear Torneo Actual
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="bracket-viewer">
