@@ -4,6 +4,7 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 const ADMIN_USER = 'GabrielLucifer22';
+const MAX_LOSSES = 3;
 
 // ===================== HELPERS =====================
 
@@ -16,88 +17,179 @@ async function saveTournamentState(state) {
     await pool.query('UPDATE tournament SET state = $1, updated_at = NOW()', [JSON.stringify(state)]);
 }
 
-function findMatchById(state, matchId) {
-    if (state.semifinals && state.semifinals.id === matchId)
-        return { match: state.semifinals, bracket: 'semifinals', roundIndex: 0 };
-    if (state.grandFinal && state.grandFinal.id === matchId)
-        return { match: state.grandFinal, bracket: 'grandFinal', roundIndex: 0 };
-    for (const bk of ['upper', 'middle', 'lower']) {
-        if (!state[bk] || !state[bk].rounds) continue;
-        for (let r = 0; r < state[bk].rounds.length; r++) {
-            const m = state[bk].rounds[r].find(x => x.id === matchId);
-            if (m) return { match: m, bracket: bk, roundIndex: r };
-        }
-    }
-    return null;
-}
+/**
+ * Swiss pairing algorithm:
+ * 1. Group active players by record (wins-losses key, e.g. "2-1")
+ * 2. Sort groups from best record to worst
+ * 3. Within each group, shuffle and pair
+ * 4. If odd in a group, carry the leftover down to next group
+ * 5. Avoid rematches when possible
+ * 6. If total active players is odd, give BYE to worst-ranked player without prior BYE
+ */
+function generateSwissPairings(state) {
+    const activePlayers = state.players.filter(p => !p.eliminated);
 
-function countFeedMatches(state, targetMatchId) {
-    let count = 0;
-    for (const bk of ['upper', 'middle', 'lower']) {
-        if (!state[bk] || !state[bk].rounds) continue;
-        for (const round of state[bk].rounds) {
-            for (const m of round) {
-                if (m.nextMatchId === targetMatchId ||
-                    (m.loserDest && m.loserDest.matchId === targetMatchId)) {
-                    if (m.status !== 'completed') count++;
-                }
+    if (activePlayers.length < 2) return { matches: [], bye: null };
+
+    // Build set of past matchups for rematch avoidance
+    const pastMatchups = new Set();
+    for (const round of state.rounds) {
+        for (const m of round.matches) {
+            if (!m.isBye && m.player1 && m.player2) {
+                const key1 = `${m.player1.id}-${m.player2.id}`;
+                const key2 = `${m.player2.id}-${m.player1.id}`;
+                pastMatchups.add(key1);
+                pastMatchups.add(key2);
             }
         }
     }
-    // Also check semifinals/grandFinal
-    if (state.semifinals && state.semifinals.nextMatchId === targetMatchId && state.semifinals.status !== 'completed') count++;
-    return count;
-}
 
-function placeInMatch(state, matchId, player) {
-    const found = findMatchById(state, matchId);
-    if (!found) return;
-    const m = found.match;
-    if (!m.player1) m.player1 = player;
-    else if (!m.player2) m.player2 = player;
-    checkAutoWin(state, m);
-}
+    // Determine BYE player if odd number of active players
+    let byePlayer = null;
+    let playersToMatch = [...activePlayers];
 
-function checkAutoWin(state, match) {
-    if (match.player1 && !match.player2 && match.status === 'pending') {
-        const feedCount = countFeedMatches(state, match.id);
-        if (feedCount > 0) return;
-        match.status = 'completed';
-        match.winnerId = match.player1.id;
-        match.score = { p1: 2, p2: 0 };
-        advanceWinner(state, match);
+    if (playersToMatch.length % 2 !== 0) {
+        // Give BYE to worst-ranked player who hasn't had one
+        // Sort by record (worst first), then by fewest wins
+        const byeCandidates = playersToMatch
+            .filter(p => !p.byeReceived)
+            .sort((a, b) => {
+                const diffA = a.wins - a.losses;
+                const diffB = b.wins - b.losses;
+                if (diffA !== diffB) return diffA - diffB; // worst record first
+                return a.wins - b.wins; // fewer wins first
+            });
+
+        // If everyone already had a BYE, allow repeat for worst player
+        if (byeCandidates.length > 0) {
+            byePlayer = byeCandidates[0];
+        } else {
+            const sorted = [...playersToMatch].sort((a, b) => {
+                const diffA = a.wins - a.losses;
+                const diffB = b.wins - b.losses;
+                if (diffA !== diffB) return diffA - diffB;
+                return a.wins - b.wins;
+            });
+            byePlayer = sorted[0];
+        }
+        playersToMatch = playersToMatch.filter(p => p.id !== byePlayer.id);
     }
-}
 
-function advanceWinner(state, match) {
-    if (!match.winnerId) return;
-    const winner = match.winnerId === match.player1.id ? match.player1 : match.player2;
-    const loser = match.player2
-        ? (match.loserId === match.player1.id ? match.player1 : match.player2)
-        : null;
-    if (match.nextMatchId) placeInMatch(state, match.nextMatchId, winner);
-    if (loser && match.loserDest) placeInMatch(state, match.loserDest.matchId, loser);
-}
+    // Group players by record
+    const groups = {};
+    for (const p of playersToMatch) {
+        const key = `${p.wins}-${p.losses}`;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(p);
+    }
 
-function nextPow2(n) { let p = 1; while (p < n) p *= 2; return p; }
+    // Sort group keys: best record first (most wins, fewest losses)
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+        const [aW, aL] = a.split('-').map(Number);
+        const [bW, bL] = b.split('-').map(Number);
+        const diffA = aW - aL, diffB = bW - bL;
+        if (diffA !== diffB) return diffB - diffA; // better record first
+        return bW - aW; // more wins first
+    });
 
-function makeMatch(id, nextMatchId, loserDest) {
-    return {
-        id, nextMatchId, loserDest,
-        player1: null, player2: null,
-        status: 'pending', score: { p1: 0, p2: 0 },
-        winnerId: null, loserId: null, reports: {}
-    };
+    const matches = [];
+    let carryOver = null;
+    const roundNum = state.currentRound;
+
+    for (let gi = 0; gi < sortedKeys.length; gi++) {
+        let group = [...groups[sortedKeys[gi]]];
+
+        // Add carry-over from previous group
+        if (carryOver) {
+            group.push(carryOver);
+            carryOver = null;
+        }
+
+        // Shuffle the group
+        for (let i = group.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [group[i], group[j]] = [group[j], group[i]];
+        }
+
+        // Try to pair avoiding rematches
+        const paired = new Set();
+        const groupMatches = [];
+
+        for (let i = 0; i < group.length; i++) {
+            if (paired.has(group[i].id)) continue;
+
+            let bestPartner = null;
+            let bestPartnerIdx = -1;
+            let foundNonRematch = false;
+
+            for (let j = i + 1; j < group.length; j++) {
+                if (paired.has(group[j].id)) continue;
+
+                const matchKey = `${group[i].id}-${group[j].id}`;
+                const isRematch = pastMatchups.has(matchKey);
+
+                if (!isRematch) {
+                    bestPartner = group[j];
+                    bestPartnerIdx = j;
+                    foundNonRematch = true;
+                    break;
+                } else if (!bestPartner) {
+                    bestPartner = group[j];
+                    bestPartnerIdx = j;
+                }
+            }
+
+            if (bestPartner) {
+                paired.add(group[i].id);
+                paired.add(bestPartner.id);
+                const matchNum = matches.length + groupMatches.length + 1;
+                groupMatches.push({
+                    id: `r${roundNum}_m${matchNum}`,
+                    player1: { id: group[i].id, username: group[i].username, avatar_url: group[i].avatar_url },
+                    player2: { id: bestPartner.id, username: bestPartner.username, avatar_url: bestPartner.avatar_url },
+                    status: 'pending',
+                    score: { p1: 0, p2: 0 },
+                    winnerId: null,
+                    loserId: null,
+                    reports: {},
+                    isBye: false
+                });
+            }
+        }
+
+        matches.push(...groupMatches);
+
+        // Check for unpaired player in this group
+        for (const p of group) {
+            if (!paired.has(p.id)) {
+                carryOver = p;
+                break;
+            }
+        }
+    }
+
+    // If there's still a carry-over (shouldn't happen if BYE was correct, but safety)
+    if (carryOver && !byePlayer) {
+        byePlayer = carryOver;
+    }
+
+    // Fix match IDs to be sequential
+    matches.forEach((m, i) => {
+        m.id = `r${roundNum}_m${i + 1}`;
+    });
+
+    return { matches, bye: byePlayer };
 }
 
 // ===================== ROUTES =====================
 
+// GET / — Full tournament state
 router.get('/', async (req, res) => {
     try { res.json(await getTournamentState()); }
     catch (err) { console.error(err); res.status(500).json({ error: 'Error' }); }
 });
 
-// GET /api/tournament/players — List all registered users for admin selection
+// GET /players — List all registered users for admin selection
 router.get('/players', authMiddleware, async (req, res) => {
     try {
         if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())
@@ -111,6 +203,7 @@ router.get('/players', authMiddleware, async (req, res) => {
     }
 });
 
+// GET /my-matches — Current and past matches for the logged-in user
 router.get('/my-matches', authMiddleware, async (req, res) => {
     try {
         const state = await getTournamentState();
@@ -120,26 +213,14 @@ router.get('/my-matches', authMiddleware, async (req, res) => {
         let current = null;
         const past = [];
 
-        for (const bk of ['upper', 'middle', 'lower']) {
-            if (!state[bk] || !state[bk].rounds) continue;
-            for (const round of state[bk].rounds) {
-                for (const match of round) {
-                    const isP = (match.player1 && match.player1.id === userId) ||
-                                (match.player2 && match.player2.id === userId);
-                    if (!isP) continue;
-                    const entry = { ...match, bracket: bk };
-                    if (match.status === 'completed') past.push(entry); else current = entry;
-                }
-            }
-        }
-
-        for (const key of ['semifinals', 'grandFinal']) {
-            const m = state[key];
-            if (!m) continue;
-            const isP = (m.player1 && m.player1.id === userId) || (m.player2 && m.player2.id === userId);
-            if (isP) {
-                const entry = { ...m, bracket: key };
-                if (m.status === 'completed') past.push(entry); else current = entry;
+        for (const round of (state.rounds || [])) {
+            for (const match of round.matches) {
+                const isP = (match.player1 && match.player1.id === userId) ||
+                            (match.player2 && match.player2.id === userId);
+                if (!isP) continue;
+                const entry = { ...match, roundNumber: round.roundNumber };
+                if (match.status === 'completed') past.push(entry);
+                else current = entry;
             }
         }
 
@@ -147,9 +228,7 @@ router.get('/my-matches', authMiddleware, async (req, res) => {
     } catch (err) { console.error(err); res.status(500).json({ error: 'Error' }); }
 });
 
-// POST /api/tournament/generate
-// Accepts optional { playerIds: [id1, id2, ...] } to use specific players in order.
-// If playerIds is not provided, falls back to all registered users (shuffled).
+// POST /generate — Create tournament with Round 1 (Swiss format)
 router.post('/generate', authMiddleware, async (req, res) => {
     try {
         if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())
@@ -159,173 +238,75 @@ router.post('/generate', authMiddleware, async (req, res) => {
         const { playerIds } = req.body || {};
 
         if (playerIds && Array.isArray(playerIds) && playerIds.length >= 2) {
-            // Admin selected specific players in specific order
             const placeholders = playerIds.map((_, i) => `$${i + 1}`).join(',');
             const usersResult = await pool.query(
                 `SELECT id, username, avatar_url FROM users WHERE id IN (${placeholders})`,
                 playerIds
             );
-            // Preserve admin-specified order
             const userMap = {};
             usersResult.rows.forEach(u => { userMap[u.id] = u; });
             users = playerIds.map(id => userMap[id]).filter(Boolean);
         } else {
-            // Fallback: all registered users, shuffled
             const usersResult = await pool.query('SELECT id, username, avatar_url FROM users');
             users = usersResult.rows;
-            // Shuffle
-            for (let i = users.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [users[i], users[j]] = [users[j], users[i]];
-            }
         }
 
         if (users.length < 2) return res.status(400).json({ error: 'Se necesitan al menos 2 jugadores' });
 
-        const n = users.length;
-        const numUBRounds = Math.ceil(Math.log2(n));
-        const ubSlots = Math.pow(2, numUBRounds);
+        // Shuffle for Round 1
+        for (let i = users.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [users[i], users[j]] = [users[j], users[i]];
+        }
 
         const state = {
             status: 'active',
+            format: 'swiss',
             generatedAt: new Date().toISOString(),
-            upper: { rounds: [] },
-            middle: { rounds: [] },
-            lower: { rounds: [] },
-            semifinals: null,
-            grandFinal: null
+            players: users.map(u => ({
+                id: u.id,
+                username: u.username,
+                avatar_url: u.avatar_url,
+                wins: 0,
+                losses: 0,
+                eliminated: false,
+                byeReceived: false
+            })),
+            rounds: [],
+            currentRound: 1,
+            champion: null
         };
 
-        // ========== UPPER BRACKET ==========
-        const upperR0 = [];
-        for (let i = 0; i < ubSlots; i += 2) {
-            const mNum = (i / 2) + 1;
-            const p1 = i < n ? users[i] : null;
-            const p2 = (i + 1) < n ? users[i + 1] : null;
-            const matchId = `u0_m${mNum}`;
-            const nextMatchId = numUBRounds > 1 ? `u1_m${Math.ceil(mNum / 2)}` : 'gf_final';
-            const isBye = !p1 || !p2;
-            const loserDest = isBye ? null : { matchId: `m0_m${Math.ceil(mNum / 2)}` };
+        // Generate Round 1 pairings (random since all are 0-0)
+        const { matches, bye } = generateSwissPairings(state);
 
-            upperR0.push({
-                id: matchId, nextMatchId, loserDest,
-                player1: p1, player2: p2,
-                status: isBye ? 'completed' : 'pending',
-                score: isBye ? { p1: p1 ? 2 : 0, p2: p2 ? 2 : 0 } : { p1: 0, p2: 0 },
-                winnerId: isBye ? (p1 ? p1.id : (p2 ? p2.id : null)) : null,
-                loserId: null, reports: {}
-            });
-        }
-        state.upper.rounds.push(upperR0);
+        const round = {
+            roundNumber: 1,
+            status: 'active',
+            matches,
+            bye: bye ? { id: bye.id, username: bye.username, avatar_url: bye.avatar_url } : null
+        };
 
-        let prevCount = upperR0.length;
-        for (let r = 1; prevCount > 1; r++) {
-            const numM = Math.ceil(prevCount / 2);
-            const round = [];
-            for (let m = 1; m <= numM; m++) {
-                const mId = `u${r}_m${m}`;
-                const isUBFinal = numM === 1;
-                const nextMId = isUBFinal ? 'gf_final' : `u${r + 1}_m${Math.ceil(m / 2)}`;
-                const midRound = 2 * r - 1;
-                round.push(makeMatch(mId, nextMId, { matchId: `m${midRound}_m${m}` }));
-            }
-            state.upper.rounds.push(round);
-            prevCount = numM;
-        }
-
-        // ========== MIDDLE BRACKET ==========
-        // Losers from Upper fall here. Losers from Middle fall to Lower.
-        const numMidRounds = numUBRounds >= 2 ? 2 * (numUBRounds - 1) : 0;
-        const allMiddleMatches = [];
-
-        for (let mr = 0; mr < numMidRounds; mr++) {
-            const isMinor = mr % 2 === 0;
-            let numM;
-
-            if (mr === 0) {
-                numM = Math.ceil(upperR0.length / 2);
-            } else if (isMinor) {
-                numM = Math.ceil(state.middle.rounds[mr - 1].length / 2);
-            } else {
-                numM = state.middle.rounds[mr - 1].length;
-            }
-
-            const round = [];
-            for (let m = 1; m <= numM; m++) {
-                const mId = `m${mr}_m${m}`;
-                const isMidFinal = mr === numMidRounds - 1;
-                let nextMId;
-                if (isMidFinal) nextMId = 'gf_semi';
-                else if (isMinor) nextMId = `m${mr + 1}_m${m}`;
-                else nextMId = `m${mr + 1}_m${Math.ceil(m / 2)}`;
-
-                const match = makeMatch(mId, nextMId, null); // loserDest set below
-                round.push(match);
-                allMiddleMatches.push(match);
-            }
-            state.middle.rounds.push(round);
-        }
-
-        // ========== LOWER BRACKET ==========
-        // Losers from Middle fall here. Losers from Lower are ELIMINATED (2nd loss).
-        const totalMidMatches = allMiddleMatches.length;
-
-        if (totalMidMatches >= 2) {
-            const lowerSlots = nextPow2(totalMidMatches);
-            const numLBRounds = Math.round(Math.log2(lowerSlots));
-
-            let lbPrevCount = lowerSlots / 2;
-            for (let lr = 0; lr < numLBRounds; lr++) {
-                const numM = lr === 0 ? lowerSlots / 2 : Math.ceil(lbPrevCount / 2);
-                const round = [];
-                for (let m = 1; m <= numM; m++) {
-                    const mId = `l${lr}_m${m}`;
-                    const isLBFinal = lr === numLBRounds - 1 && numM === 1;
-                    const nextMId = isLBFinal ? 'gf_semi' : `l${lr + 1}_m${Math.ceil(m / 2)}`;
-                    // Losers from Lower are eliminated (no loserDest = null)
-                    round.push(makeMatch(mId, nextMId, null));
-                }
-                state.lower.rounds.push(round);
-                lbPrevCount = numM;
-            }
-
-            // Assign Middle match loserDests → Lower R0 slots
-            for (let i = 0; i < allMiddleMatches.length; i++) {
-                const lowerR0Match = Math.floor(i / 2) + 1;
-                if (state.lower.rounds.length > 0 && lowerR0Match <= state.lower.rounds[0].length) {
-                    allMiddleMatches[i].loserDest = { matchId: `l0_m${lowerR0Match}` };
-                }
-                // else: loser eliminated (null loserDest stays)
-            }
-        } else if (totalMidMatches === 1) {
-            // Only 1 middle match: loser is eliminated (2nd loss) — no Lower bracket needed.
-            // The single Middle match loser has already lost once (from Upper) and now loses
-            // again in Middle = 2 losses = eliminated. This is correct.
-            allMiddleMatches[0].loserDest = null;
-        }
-
-        // ========== FINALS ==========
-        // Semifinals: Middle champion vs Lower champion (if Lower exists).
-        // Grand Final: Upper champion vs Semifinals winner.
-        state.semifinals = makeMatch('gf_semi', 'gf_final', null);
-        state.grandFinal = makeMatch('gf_final', null, null);
-
-        // ========== ADVANCE BYES ==========
-        for (const match of upperR0) {
-            if (match.status === 'completed' && match.winnerId) {
-                advanceWinner(state, match);
+        // Apply BYE win
+        if (bye) {
+            const p = state.players.find(pl => pl.id === bye.id);
+            if (p) {
+                p.wins += 1;
+                p.byeReceived = true;
             }
         }
+
+        state.rounds.push(round);
 
         await saveTournamentState(state);
-        res.json({ success: true, message: 'Torneo generado exitosamente', state });
+        res.json({ success: true, message: `Torneo suizo generado con ${users.length} jugadores`, state });
     } catch (err) {
         console.error('Generate tournament error:', err);
         res.status(500).json({ error: 'Error generando torneo' });
     }
 });
 
-// POST /api/tournament/report
+// POST /report — Player reports match result
 router.post('/report', authMiddleware, async (req, res) => {
     try {
         const { matchId, myScore, enemyScore } = req.body;
@@ -342,10 +323,13 @@ router.post('/report', authMiddleware, async (req, res) => {
         if (!state || state.status !== 'active')
             return res.status(400).json({ error: 'No hay torneo activo' });
 
-        const found = findMatchById(state, matchId);
-        if (!found) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
-        const { match } = found;
-
+        // Find match in rounds
+        let match = null;
+        for (const round of state.rounds) {
+            const m = round.matches.find(x => x.id === matchId);
+            if (m) { match = m; break; }
+        }
+        if (!match) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
         if (match.status === 'completed')
             return res.status(400).json({ error: 'Enfrentamiento ya completado' });
 
@@ -369,7 +353,15 @@ router.post('/report', authMiddleware, async (req, res) => {
                 match.score = { p1: rep1.p1, p2: rep1.p2 };
                 match.winnerId = rep1.p1 > rep1.p2 ? p1Id : p2Id;
                 match.loserId = rep1.p1 > rep1.p2 ? p2Id : p1Id;
-                advanceWinner(state, match);
+
+                // Update player records
+                const winner = state.players.find(p => p.id === match.winnerId);
+                const loser = state.players.find(p => p.id === match.loserId);
+                if (winner) winner.wins += 1;
+                if (loser) {
+                    loser.losses += 1;
+                    if (loser.losses >= MAX_LOSSES) loser.eliminated = true;
+                }
             } else {
                 match.status = 'conflict';
             }
@@ -385,7 +377,7 @@ router.post('/report', authMiddleware, async (req, res) => {
     }
 });
 
-// POST /api/tournament/admin/override
+// POST /admin/override — Admin forces match result
 router.post('/admin/override', authMiddleware, async (req, res) => {
     try {
         if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())
@@ -396,19 +388,42 @@ router.post('/admin/override', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: 'Scores inválidos' });
 
         let state = await getTournamentState();
-        const found = findMatchById(state, matchId);
-        if (!found) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
-        const { match } = found;
+
+        let match = null;
+        for (const round of state.rounds) {
+            const m = round.matches.find(x => x.id === matchId);
+            if (m) { match = m; break; }
+        }
+        if (!match) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
 
         if (!match.player1 || !match.player2)
             return res.status(400).json({ error: 'El enfrentamiento no tiene ambos jugadores' });
+
+        // If match was already completed, undo previous result first
+        if (match.status === 'completed' && match.winnerId && match.loserId) {
+            const prevWinner = state.players.find(p => p.id === match.winnerId);
+            const prevLoser = state.players.find(p => p.id === match.loserId);
+            if (prevWinner) prevWinner.wins -= 1;
+            if (prevLoser) {
+                prevLoser.losses -= 1;
+                prevLoser.eliminated = prevLoser.losses >= MAX_LOSSES;
+            }
+        }
 
         match.status = 'completed';
         match.score = { p1: p1Wins, p2: p2Wins };
         match.winnerId = p1Wins > p2Wins ? match.player1.id : match.player2.id;
         match.loserId = p1Wins > p2Wins ? match.player2.id : match.player1.id;
         match.adminOverride = true;
-        advanceWinner(state, match);
+
+        // Update player records
+        const winner = state.players.find(p => p.id === match.winnerId);
+        const loser = state.players.find(p => p.id === match.loserId);
+        if (winner) winner.wins += 1;
+        if (loser) {
+            loser.losses += 1;
+            if (loser.losses >= MAX_LOSSES) loser.eliminated = true;
+        }
 
         await saveTournamentState(state);
         res.json({ success: true, match });
@@ -418,7 +433,88 @@ router.post('/admin/override', authMiddleware, async (req, res) => {
     }
 });
 
-// POST /api/tournament/reset
+// POST /advance-round — Admin advances to next round
+router.post('/advance-round', authMiddleware, async (req, res) => {
+    try {
+        if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())
+            return res.status(403).json({ error: 'No autorizado' });
+
+        let state = await getTournamentState();
+        if (!state || state.status !== 'active')
+            return res.status(400).json({ error: 'No hay torneo activo' });
+
+        // Check all matches in current round are completed
+        const currentRound = state.rounds.find(r => r.roundNumber === state.currentRound);
+        if (!currentRound)
+            return res.status(400).json({ error: 'No se encontró la ronda actual' });
+
+        const pendingMatches = currentRound.matches.filter(m => m.status !== 'completed');
+        if (pendingMatches.length > 0)
+            return res.status(400).json({
+                error: `Hay ${pendingMatches.length} partido(s) sin completar en la Ronda ${state.currentRound}`
+            });
+
+        // Mark current round as completed
+        currentRound.status = 'completed';
+
+        // Check for champion
+        const activePlayers = state.players.filter(p => !p.eliminated);
+        if (activePlayers.length <= 1) {
+            state.status = 'finished';
+            state.champion = activePlayers.length === 1 ? {
+                id: activePlayers[0].id,
+                username: activePlayers[0].username,
+                avatar_url: activePlayers[0].avatar_url
+            } : null;
+            await saveTournamentState(state);
+            return res.json({
+                success: true,
+                message: state.champion
+                    ? `🏆 ¡${state.champion.username} es el campeón!`
+                    : 'Torneo finalizado sin campeón',
+                state
+            });
+        }
+
+        // Generate next round
+        state.currentRound += 1;
+        const { matches, bye } = generateSwissPairings(state);
+
+        if (matches.length === 0 && !bye) {
+            return res.status(400).json({ error: 'No se pueden generar emparejamientos' });
+        }
+
+        const newRound = {
+            roundNumber: state.currentRound,
+            status: 'active',
+            matches,
+            bye: bye ? { id: bye.id, username: bye.username, avatar_url: bye.avatar_url } : null
+        };
+
+        // Apply BYE win
+        if (bye) {
+            const p = state.players.find(pl => pl.id === bye.id);
+            if (p) {
+                p.wins += 1;
+                p.byeReceived = true;
+            }
+        }
+
+        state.rounds.push(newRound);
+
+        await saveTournamentState(state);
+        res.json({
+            success: true,
+            message: `Ronda ${state.currentRound} generada con ${matches.length} partidos`,
+            state
+        });
+    } catch (err) {
+        console.error('Advance round error:', err);
+        res.status(500).json({ error: 'Error avanzando ronda' });
+    }
+});
+
+// POST /reset — Reset tournament
 router.post('/reset', authMiddleware, async (req, res) => {
     try {
         if (req.username.toLowerCase() !== ADMIN_USER.toLowerCase())

@@ -1764,157 +1764,174 @@ function switchBattlesTab(tab) {
     if (tab === 'bracket') loadTournament();
 }
 
-// ===================== TOURNAMENT BRACKET =====================
+// ===================== TOURNAMENT (SWISS FORMAT) =====================
 
 async function loadTournament() {
     try {
         const res = await fetch('/api/tournament');
         tournamentState = await res.json();
-        renderFullBracket();
+        renderSwissTournament();
     } catch (err) {
         console.error('Error loading tournament:', err);
     }
 }
 
-function renderFullBracket() {
+function renderSwissTournament() {
+    const standingsEl = document.getElementById('swiss-standings');
+    const roundsEl = document.getElementById('swiss-rounds');
+    const championBanner = document.getElementById('swiss-champion-banner');
+    const adminActions = document.getElementById('swiss-admin-actions');
+
+    if (!standingsEl || !roundsEl) return;
+
     if (!tournamentState || !tournamentState.status) {
-        document.getElementById('upper-rounds').innerHTML = '<p class="bracket-empty">No hay torneo activo. El admin debe generar uno.</p>';
-        document.getElementById('middle-rounds').innerHTML = '';
-        document.getElementById('lower-rounds').innerHTML = '';
-        document.getElementById('grand-final-content').innerHTML = '';
+        standingsEl.innerHTML = '<p class="bracket-empty">No hay torneo activo. El admin debe generar uno.</p>';
+        roundsEl.innerHTML = '';
+        if (championBanner) championBanner.style.display = 'none';
+        if (adminActions) adminActions.style.display = 'none';
         return;
     }
 
-    renderBracketSection('upper', 'upper-rounds');
-    renderBracketSection('middle', 'middle-rounds');
-    renderBracketSection('lower', 'lower-rounds');
-    renderGrandFinal();
+    // Champion Banner
+    if (championBanner) {
+        if (tournamentState.status === 'finished' && tournamentState.champion) {
+            const c = tournamentState.champion;
+            championBanner.innerHTML = `
+                <div class="champion-content">
+                    <div class="champion-trophy">🏆</div>
+                    <div class="champion-info">
+                        <div class="champion-label">¡CAMPEÓN DEL TORNEO!</div>
+                        <div class="champion-name">
+                            ${renderSmallAvatar(c)}
+                            <span>${escapeHtml(c.username)}</span>
+                        </div>
+                    </div>
+                </div>`;
+            championBanner.style.display = '';
+        } else {
+            championBanner.style.display = 'none';
+        }
+    }
+
+    // Admin advance button
+    const isAdmin = authUser && authUser.username.toLowerCase() === 'gabriellucifer22';
+    if (adminActions) {
+        if (isAdmin && tournamentState.status === 'active') {
+            adminActions.style.display = '';
+            const currentRound = tournamentState.rounds.find(r => r.roundNumber === tournamentState.currentRound);
+            const allCompleted = currentRound && currentRound.matches.every(m => m.status === 'completed');
+            const btn = document.getElementById('swiss-advance-btn');
+            if (btn) {
+                btn.disabled = !allCompleted;
+                btn.textContent = allCompleted
+                    ? `⏭️ Avanzar a Ronda ${tournamentState.currentRound + 1}`
+                    : `⏳ Esperando resultados de Ronda ${tournamentState.currentRound}...`;
+            }
+        } else {
+            adminActions.style.display = 'none';
+        }
+    }
+
+    // Render Standings
+    renderSwissStandings(standingsEl);
+
+    // Render Rounds (newest first)
+    renderSwissRounds(roundsEl);
 }
 
-function renderGrandFinal() {
-    const container = document.getElementById('grand-final-content');
-    if (!container) return;
+function renderSwissStandings(container) {
+    const players = tournamentState.players || [];
+    // Sort: active first, then by wins (desc), then by losses (asc)
+    const sorted = [...players].sort((a, b) => {
+        if (a.eliminated !== b.eliminated) return a.eliminated ? 1 : -1;
+        if (a.wins !== b.wins) return b.wins - a.wins;
+        return a.losses - b.losses;
+    });
 
-    const semi = tournamentState.semifinals;
-    const gf = tournamentState.grandFinal;
+    let html = '<div class="swiss-table">';
+    html += `<div class="swiss-table-header">
+        <span class="swiss-col-rank">#</span>
+        <span class="swiss-col-player">Jugador</span>
+        <span class="swiss-col-record">Récord</span>
+        <span class="swiss-col-status">Estado</span>
+    </div>`;
 
-    let html = '<div class="gf-matches">';
+    sorted.forEach((p, i) => {
+        const rank = i + 1;
+        const recordClass = p.eliminated ? 'swiss-eliminated' : '';
+        const wlClass = p.losses === 0 ? 'swiss-record-clean' :
+                        p.losses === 1 ? 'swiss-record-ok' :
+                        p.losses === 2 ? 'swiss-record-danger' : 'swiss-record-out';
 
-    if (semi) {
-        html += '<div class="gf-stage"><div class="gf-stage-label">⚔️ Semifinal</div>';
-        html += renderMatchCard(semi, 'semifinals');
-        html += '</div>';
-    }
+        let statusBadge = '';
+        if (p.eliminated) {
+            statusBadge = '<span class="swiss-badge swiss-badge-eliminated">ELIMINADO</span>';
+        } else if (tournamentState.champion && tournamentState.champion.id === p.id) {
+            statusBadge = '<span class="swiss-badge swiss-badge-champion">🏆 CAMPEÓN</span>';
+        } else {
+            statusBadge = '<span class="swiss-badge swiss-badge-active">ACTIVO</span>';
+        }
 
-    if (gf) {
-        html += '<div class="gf-stage"><div class="gf-stage-label">👑 Gran Final</div>';
-        html += renderMatchCard(gf, 'grandFinal');
-        html += '</div>';
-    }
-
-    if (!semi && !gf) {
-        html += '<p class="bracket-empty">Las finales se desbloquearán cuando los brackets tengan campeones.</p>';
-    }
+        html += `
+        <div class="swiss-table-row ${p.eliminated ? 'swiss-row-eliminated' : ''}">
+            <span class="swiss-col-rank">${rank}</span>
+            <span class="swiss-col-player">
+                ${renderSmallAvatar(p)}
+                <span class="swiss-player-name">${escapeHtml(p.username)}</span>
+                ${p.byeReceived ? '<span class="swiss-bye-tag">BYE</span>' : ''}
+            </span>
+            <span class="swiss-col-record ${wlClass}">${p.wins} - ${p.losses}</span>
+            <span class="swiss-col-status">${statusBadge}</span>
+        </div>`;
+    });
 
     html += '</div>';
     container.innerHTML = html;
 }
 
-function getRoundLabel(roundIndex, totalRounds) {
-    if (totalRounds <= 1) return 'Final';
-    if (roundIndex === totalRounds - 1) return 'Final';
-    if (roundIndex === totalRounds - 2) return 'Semifinales';
-    return `Ronda ${roundIndex + 1}`;
-}
-
-function renderBracketSection(bracketKey, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    const bracket = tournamentState[bracketKey];
-    if (!bracket || !bracket.rounds || bracket.rounds.length === 0) {
-        container.innerHTML = '<p class="bracket-empty">Sin enfrentamientos</p>';
+function renderSwissRounds(container) {
+    const rounds = tournamentState.rounds || [];
+    if (rounds.length === 0) {
+        container.innerHTML = '<p class="bracket-empty">Sin rondas todavía.</p>';
         return;
     }
 
-    const validRounds = bracket.rounds.filter(r => r && r.length > 0);
-    if (validRounds.length === 0) {
-        container.innerHTML = '<p class="bracket-empty">Sin enfrentamientos</p>';
-        return;
-    }
-
-    let html = '';
-    validRounds.forEach((round, rIdx) => {
-        const isLastRound = rIdx === validRounds.length - 1;
-        html += `<div class="tb-round${isLastRound ? ' tb-round-final' : ''}" data-round="${rIdx}">`;
-        html += `<div class="tb-round-header">${getRoundLabel(rIdx, validRounds.length)}</div>`;
-        html += `<div class="tb-round-matches">`;
-        round.forEach(match => {
-            html += renderMatchCard(match, bracketKey);
-        });
-        html += `</div></div>`;
-        // Add connector column between rounds (except after last)
-        if (!isLastRound) {
-            html += `<div class="tb-connector-col" data-round="${rIdx}" data-matches="${round.length}"></div>`;
-        }
-    });
-
-    container.innerHTML = html;
-
-    // Draw SVG connectors
-    requestAnimationFrame(() => drawConnectors(container));
-}
-
-function drawConnectors(container) {
-    // Remove existing SVG overlays
-    container.querySelectorAll('.tb-svg-overlay').forEach(s => s.remove());
-
-    const rounds = container.querySelectorAll('.tb-round');
-    if (rounds.length < 2) return;
-
-    // Create SVG overlay for the entire bracket
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.classList.add('tb-svg-overlay');
-    svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;';
-    container.style.position = 'relative';
-    container.appendChild(svg);
-
-    const containerRect = container.getBoundingClientRect();
-
-    for (let r = 0; r < rounds.length - 1; r++) {
-        const currentMatches = rounds[r].querySelectorAll('.tb-match');
-        const nextMatches = rounds[r + 1].querySelectorAll('.tb-match');
-
-        for (let m = 0; m < currentMatches.length; m++) {
-            const sourceMatch = currentMatches[m];
-            const targetIdx = Math.floor(m / 2);
-            const targetMatch = nextMatches[targetIdx];
-            if (!targetMatch) continue;
-
-            const srcRect = sourceMatch.getBoundingClientRect();
-            const tgtRect = targetMatch.getBoundingClientRect();
-
-            const x1 = srcRect.right - containerRect.left;
-            const y1 = srcRect.top + srcRect.height / 2 - containerRect.top;
-            const x2 = tgtRect.left - containerRect.left;
-            const y2 = tgtRect.top + tgtRect.height / 2 - containerRect.top;
-            const midX = (x1 + x2) / 2;
-
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', `M${x1},${y1} H${midX} V${y2} H${x2}`);
-            path.setAttribute('fill', 'none');
-            path.setAttribute('stroke', 'rgba(120,130,180,0.35)');
-            path.setAttribute('stroke-width', '2');
-            svg.appendChild(path);
-        }
-    }
-}
-
-function renderMatchCard(match, bracketKey) {
-    const p1 = match.player1;
-    const p2 = match.player2;
     const isAdmin = authUser && authUser.username.toLowerCase() === 'gabriellucifer22';
 
+    // Render rounds in reverse order (newest first)
+    let html = '';
+    for (let i = rounds.length - 1; i >= 0; i--) {
+        const round = rounds[i];
+        const isCurrent = round.roundNumber === tournamentState.currentRound && tournamentState.status === 'active';
+
+        html += `<div class="swiss-round ${isCurrent ? 'swiss-round-current' : ''}">`;
+        html += `<div class="swiss-round-header">
+            <span class="swiss-round-label">Ronda ${round.roundNumber}</span>
+            ${isCurrent ? '<span class="swiss-round-badge">EN CURSO</span>' : '<span class="swiss-round-badge swiss-round-done">COMPLETADA</span>'}
+        </div>`;
+
+        // BYE info
+        if (round.bye) {
+            html += `<div class="swiss-bye-card">
+                ${renderSmallAvatar(round.bye)}
+                <span>${escapeHtml(round.bye.username)}</span>
+                <span class="swiss-bye-label">BYE (victoria automática)</span>
+            </div>`;
+        }
+
+        html += '<div class="swiss-round-matches">';
+        for (const match of round.matches) {
+            html += renderSwissMatchCard(match, isAdmin);
+        }
+        html += '</div></div>';
+    }
+
+    container.innerHTML = html;
+}
+
+function renderSwissMatchCard(match, isAdmin) {
+    const p1 = match.player1;
+    const p2 = match.player2;
     const p1Name = p1 ? escapeHtml(p1.username) : '—';
     const p2Name = p2 ? escapeHtml(p2.username) : '—';
 
@@ -1930,8 +1947,8 @@ function renderMatchCard(match, bracketKey) {
     if (isAdmin && (match.status === 'conflict' || match.status === 'pending' || match.status === 'waiting_opponent') && p1 && p2) {
         adminHtml = `
             <div class="tb-admin">
-                <button class="tb-admin-btn" onclick="adminOverrideMatch('${match.id}', 2, 0)" title="Victoria ${p1Name}">👑 P1</button>
-                <button class="tb-admin-btn" onclick="adminOverrideMatch('${match.id}', 0, 2)" title="Victoria ${p2Name}">👑 P2</button>
+                <button class="tb-admin-btn" onclick="adminOverrideMatch('${match.id}', 2, 0)" title="Victoria ${p1Name}">👑 ${p1Name}</button>
+                <button class="tb-admin-btn" onclick="adminOverrideMatch('${match.id}', 0, 2)" title="Victoria ${p2Name}">👑 ${p2Name}</button>
             </div>`;
     }
 
@@ -1960,6 +1977,7 @@ function renderSmallAvatar(player) {
     }
     return `<div class="match-avatar">${initial}</div>`;
 }
+
 
 // ===================== MY MATCHES =====================
 
@@ -1992,8 +2010,7 @@ function renderCurrentMatch(match) {
     const opponent = isP1 ? match.player2 : match.player1;
     const opponentName = opponent ? escapeHtml(opponent.username) : 'BYE';
 
-    const bracketLabels = { upper: '🏆 Winners Bracket', middle: '⚔️ Middle Bracket', lower: '💀 Lower Bracket', semifinals: '⚔️ Semifinal', grandFinal: '👑 Gran Final' };
-    const bracketLabel = bracketLabels[match.bracket] || match.bracket;
+    const bracketLabel = match.roundNumber ? `⚔️ Ronda ${match.roundNumber}` : '⚔️ Torneo';
 
     let statusHtml = '';
     const myReport = match.reports ? match.reports[userId] : null;
@@ -2065,7 +2082,7 @@ function renderPastMatches(matches) {
         const won = match.winnerId === userId;
         const myScore = isP1 ? match.score.p1 : match.score.p2;
         const opScore = isP1 ? match.score.p2 : match.score.p1;
-        const bracketLabel = match.bracket === 'upper' ? 'Winners' : match.bracket === 'middle' ? 'Middle' : match.bracket === 'lower' ? 'Lower' : match.bracket === 'semifinals' ? 'Semifinal' : 'Gran Final';
+        const bracketLabel = match.roundNumber ? `Ronda ${match.roundNumber}` : 'Torneo';
 
         html += `
             <div class="past-match-row ${won ? 'past-win' : 'past-loss'}">
@@ -2126,6 +2143,31 @@ async function adminOverrideMatch(matchId, p1Wins, p2Wins) {
             alert(data.error || 'Error');
             return;
         }
+        loadTournament();
+        loadMyMatches();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+async function adminAdvanceRound() {
+    if (!authToken) return;
+    if (!confirm('¿Avanzar a la siguiente ronda? Todos los partidos deben estar completados.')) return;
+
+    try {
+        const res = await fetch('/api/tournament/advance-round', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error');
+            return;
+        }
+        if (data.message) alert(data.message);
         loadTournament();
         loadMyMatches();
     } catch (err) {

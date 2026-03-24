@@ -3183,7 +3183,293 @@ header p {
   transform: translateY(-1px);
 }
 
-/* SVG Connector Overlay */
+/* ================== SWISS TOURNAMENT ================== */
+
+/* Champion Banner */
+.swiss-champion-banner {
+  background: linear-gradient(135deg, rgba(255, 211, 42, 0.12), rgba(255, 140, 0, 0.08));
+  border: 2px solid rgba(255, 211, 42, 0.4);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 24px;
+  text-align: center;
+  box-shadow: 0 0 40px rgba(255, 200, 50, 0.12);
+  animation: champion-glow 3s ease-in-out infinite;
+}
+@keyframes champion-glow {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 200, 50, 0.12); }
+  50% { box-shadow: 0 0 60px rgba(255, 200, 50, 0.25); }
+}
+.champion-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.champion-trophy {
+  font-size: 4rem;
+  filter: drop-shadow(0 0 20px rgba(255, 200, 50, 0.5));
+  animation: prize-float 3s ease-in-out infinite;
+}
+.champion-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent-gold);
+  margin-bottom: 8px;
+}
+.champion-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ffd54f, #ff8f00, #ffd54f);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.champion-name .match-avatar {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2rem;
+}
+
+/* Admin Actions */
+.swiss-admin-actions {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.swiss-advance-btn {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-family: "Inter", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 16px rgba(103, 126, 234, 0.25);
+}
+.swiss-advance-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(103, 126, 234, 0.35);
+}
+.swiss-advance-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: rgba(100, 100, 130, 0.3);
+  box-shadow: none;
+}
+
+/* Standings Section */
+.swiss-standings-section,
+.swiss-rounds-section {
+  margin-bottom: 32px;
+}
+.swiss-standings-section h3,
+.swiss-rounds-section h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+/* Standings Table */
+.swiss-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+.swiss-table-header {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px 110px;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(20, 20, 40, 0.8);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.swiss-table-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 80px 110px;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(60, 60, 90, 0.2);
+  align-items: center;
+  transition: background 0.2s;
+}
+.swiss-table-row:last-child {
+  border-bottom: none;
+}
+.swiss-table-row:hover {
+  background: rgba(103, 126, 234, 0.04);
+}
+.swiss-row-eliminated {
+  opacity: 0.45;
+}
+.swiss-row-eliminated:hover {
+  opacity: 0.55;
+}
+
+.swiss-col-rank {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: center;
+}
+.swiss-col-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+.swiss-player-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swiss-row-eliminated .swiss-player-name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.swiss-col-record {
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.swiss-record-clean { color: var(--accent-green); }
+.swiss-record-ok { color: var(--text-primary); }
+.swiss-record-danger { color: var(--accent-gold); }
+.swiss-record-out { color: var(--accent-red); }
+
+.swiss-col-status {
+  text-align: center;
+}
+
+/* Badges */
+.swiss-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.swiss-badge-active {
+  background: rgba(32, 191, 107, 0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(32, 191, 107, 0.2);
+}
+.swiss-badge-eliminated {
+  background: rgba(255, 71, 87, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(255, 71, 87, 0.2);
+}
+.swiss-badge-champion {
+  background: rgba(255, 211, 42, 0.15);
+  color: var(--accent-gold);
+  border: 1px solid rgba(255, 211, 42, 0.3);
+}
+
+.swiss-bye-tag {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  background: rgba(255, 211, 42, 0.1);
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 211, 42, 0.2);
+  flex-shrink: 0;
+}
+
+/* Round Cards */
+.swiss-round {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+.swiss-round-current {
+  border-color: rgba(103, 126, 234, 0.4);
+  box-shadow: 0 0 20px rgba(103, 126, 234, 0.08);
+}
+.swiss-round-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: rgba(20, 20, 40, 0.6);
+  border-bottom: 1px solid var(--border-color);
+}
+.swiss-round-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.swiss-round-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba(103, 126, 234, 0.15);
+  color: #667eea;
+  border: 1px solid rgba(103, 126, 234, 0.3);
+}
+.swiss-round-done {
+  background: rgba(32, 191, 107, 0.1);
+  color: var(--accent-green);
+  border-color: rgba(32, 191, 107, 0.2);
+}
+.swiss-round-matches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+/* BYE card */
+.swiss-bye-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  background: rgba(255, 211, 42, 0.04);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.swiss-bye-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-left: auto;
+  background: rgba(255, 211, 42, 0.1);
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+
+/* SVG Connector Overlay (kept for compatibility) */
 .tb-svg-overlay {
   position: absolute;
   top: 0;

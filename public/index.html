@@ -592,29 +592,27 @@
             </div>
           </div>
 
-          <div class="bracket-viewer">
-            <!-- Winners Bracket -->
-            <div class="bracket-section" id="upper-bracket">
-              <h3>🏆 Winners Bracket</h3>
-              <div class="bracket-rounds" id="upper-rounds"></div>
+          <div class="swiss-viewer" id="swiss-viewer">
+            <!-- Champion Banner (hidden until tournament ends) -->
+            <div class="swiss-champion-banner" id="swiss-champion-banner" style="display:none"></div>
+
+            <!-- Admin: Advance Round Button -->
+            <div class="swiss-admin-actions" id="swiss-admin-actions" style="display:none">
+              <button class="swiss-advance-btn" id="swiss-advance-btn" onclick="adminAdvanceRound()">
+                ⏭️ Avanzar a siguiente Ronda
+              </button>
             </div>
-            <!-- Middle Bracket -->
-            <div class="bracket-section" id="middle-bracket">
-              <h3>⚔️ Middle Bracket</h3>
-              <div class="bracket-rounds" id="middle-rounds"></div>
+
+            <!-- Standings Table -->
+            <div class="swiss-standings-section">
+              <h3>📊 Clasificación</h3>
+              <div id="swiss-standings"></div>
             </div>
-            <!-- Lower Bracket -->
-            <div class="bracket-section" id="lower-bracket">
-              <h3>💀 Lower Bracket</h3>
-              <div class="bracket-rounds" id="lower-rounds"></div>
-            </div>
-            <!-- Semifinals & Grand Final -->
-            <div
-              class="bracket-section bracket-grand-final"
-              id="grand-final-section"
-            >
-              <h3>👑 Finales</h3>
-              <div id="grand-final-content"></div>
+
+            <!-- Rounds History -->
+            <div class="swiss-rounds-section">
+              <h3>⚔️ Rondas</h3>
+              <div id="swiss-rounds"></div>
             </div>
           </div>
         </div>
