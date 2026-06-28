@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Megalocke - Stream Overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: transparent; font-family: Outfit, sans-serif; width: 100vw; height: 100vh; overflow: hidden; pointer-events: none; }
+    
+    #curse-container { position: fixed; bottom: 40px; right: 40px; display: flex; flex-direction: column-reverse; gap: 16px; align-items: flex-end; max-width: 420px; }
+    
+    .curse-card { 
+      background: linear-gradient(135deg, rgba(15,15,30,0.97) 0%, rgba(35,10,55,0.97) 100%); 
+      border: 2px solid var(--curse-color, #8c7ae6); 
+      border-radius: 16px; 
+      width: 400px; 
+      overflow: hidden; 
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 20px 60px rgba(0,0,0,0.8), 0 0 40px var(--curse-glow, rgba(140,122,230,0.4)); 
+      animation: curseSlideIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both; 
+    }
+    
+    .curse-card.dismissing { animation: curseSlideOut 0.5s ease-in forwards; }
+    
+    @keyframes curseSlideIn { 
+      from { opacity:0; transform:translateX(60px) scale(0.8); } 
+      to { opacity:1; transform:translateX(0) scale(1); } 
+    }
+    
+    @keyframes curseSlideOut { 
+      from { opacity:1; transform:translateX(0) scale(1); max-height:200px; } 
+      to { opacity:0; transform:translateX(80px) scale(0.7); max-height:0; } 
+    }
+    
+    .curse-header { background: var(--curse-color, #8c7ae6); padding: 12px 18px; display: flex; align-items: center; gap: 12px; position: relative; overflow: hidden; }
+    .curse-header::before { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.15) 50%,transparent 100%); animation:shimmer 2s infinite; }
+    
+    @keyframes shimmer { from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+    
+    .curse-header-emoji { font-size:1.8rem; filter:drop-shadow(0 0 8px rgba(255,255,255,0.6)); animation:pulse 1.5s ease-in-out infinite; z-index:1; }
+    
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+    
+    .curse-header-text { z-index:1; flex:1; }
+    .curse-header-label { font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:rgba(255,255,255,0.8); display:block; margin-bottom: 2px; }
+    .curse-header-name { font-size:1.2rem; font-weight:900; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,0.5); }
+    
+    .curse-from { z-index:1; font-size:0.75rem; color:rgba(255,255,255,0.9); font-weight:700; text-align:right; }
+    .curse-from span { display:block; font-size:0.65rem; color:rgba(255,255,255,0.6); font-weight:400; margin-bottom: 2px; }
+    
+    .curse-body { padding: 16px 20px 20px; }
+    .curse-body-text { font-size:0.95rem; color:rgba(255,255,255,0.9); line-height:1.5; border-left:3px solid var(--curse-color, #8c7ae6); padding-left:14px; margin-bottom:14px; }
+    
+    .curse-timer { height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; }
+    .curse-timer-bar { height:100%; background:var(--curse-color, #8c7ae6); border-radius:2px; animation:timerDrain 12s linear forwards; box-shadow:0 0 8px var(--curse-color, #8c7ae6); }
+    
+    @keyframes timerDrain { from{width:100%} to{width:0%} }
+    
+    .curse-skull { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:10rem; pointer-events:none; z-index:999; animation:skullBurst 1.2s ease-out forwards; filter:drop-shadow(0 0 35px rgba(255,50,50,0.8)); }
+    
+    @keyframes skullBurst { 
+      0%{opacity:0;transform:translate(-50%,-50%) scale(0.3)} 
+      30%{opacity:1;transform:translate(-50%,-50%) scale(1.3)} 
+      60%{opacity:1;transform:translate(-50%,-50%) scale(1)} 
+      100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)} 
+    }
+  </style>
+</head>
+<body>
+  <div id="curse-container"></div>
+  <script>
+    const CURSE_DURATION_MS = 12000;
+    const CURSE_LABELS = {
+      five_pokemon: 'RESTRICCION: Max. 5 Pokemon hasta la siguiente isla',
+      steal_pokemon: 'Un Pokemon de tu equipo ha sido robado!',
+      no_special: 'MALDICION: Sin ataques especiales en tu proximo combate',
+      no_physical: 'MALDICION: Sin ataques fisicos en tu proximo combate',
+      no_status: 'MALDICION: Sin ataques de estado en tu proximo combate',
+      no_supereffective: 'MALDICION: Sin ataques supereficaces en tu proximo combate',
+      choice_band: 'MALDICION: Choice Band ficticia - solo el 1er movimiento por Pokemon',
+      gender_lock: 'MALDICION: Solo Pokemon del mismo genero en tu proximo combate',
+      steal_card: 'Te han robado una carta de la mano!',
+      nerf_pokemon: 'Tu Pokemon ha sido nerfeado - 0 IVs, 0 EVs, naturaleza neutra!',
+      kill_pokemon: 'MUERTE FORZADA: Un Pokemon de tu equipo debe morir!'
+    };
+    const CURSE_COLORS = {
+      five_pokemon: '#ff9f43', steal_pokemon: '#ff4757', no_special: '#8c7ae6',
+      no_physical: '#8c7ae6', no_status: '#8c7ae6', no_supereffective: '#ff9f43',
+      choice_band: '#ff9f43', gender_lock: '#8c7ae6', steal_card: '#ff9f43',
+      nerf_pokemon: '#ff4757', kill_pokemon: '#ff4757'
+    };
+
+    function playAlertSound(isSevere) {
+      const soundUrl = isSevere 
+        ? 'https://assets.mixkit.co/active_storage/sfx/2869/2869-700.wav' // dramatic impact
+        : 'https://assets.mixkit.co/active_storage/sfx/1011/1011-700.wav'; // synth ding
+      new Audio(soundUrl).play().catch(() => {});
+    }
+
+    function showCurse(curse) {
+      const color = CURSE_COLORS[curse.curseType] || '#8c7ae6';
+      const severe = ['steal_pokemon','kill_pokemon','nerf_pokemon'].includes(curse.curseType);
+      
+      // Play sound
+      playAlertSound(severe);
+
+      if (severe) {
+        const skull = document.createElement('div');
+        skull.className = 'curse-skull';
+        skull.textContent = curse.cardEmoji || '!';
+        document.body.appendChild(skull);
+        setTimeout(() => skull.remove(), 1200);
+      }
+      
+      const container = document.getElementById('curse-container');
+      const card = document.createElement('div');
+      card.className = 'curse-card';
+      card.style.setProperty('--curse-color', color);
+      card.style.setProperty('--curse-glow', color + '55');
+      
+      const label = CURSE_LABELS[curse.curseType] || curse.description || 'Maldición recibida';
+      card.innerHTML = `
+        <div class="curse-header">
+          <div class="curse-header-emoji">${curse.cardEmoji || '?'}</div>
+          <div class="curse-header-text">
+            <span class="curse-header-label">Carta Jugada</span>
+            <div class="curse-header-name">${curse.cardName || 'Maldición'}</div>
+          </div>
+          <div class="curse-from">
+            <span>de</span>
+            ${curse.fromUsername || 'Rival'}
+          </div>
+        </div>
+        <div class="curse-body">
+          <div class="curse-body-text">${label}</div>
+          <div class="curse-timer">
+            <div class="curse-timer-bar"></div>
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(card);
+      setTimeout(() => { 
+        card.classList.add('dismissing'); 
+        setTimeout(() => card.remove(), 500); 
+      }, CURSE_DURATION_MS);
+    }
+
+    // Connect to Server-Sent Events stream on the remote server
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+
+    if (!userId) {
+      document.body.innerHTML = `
+        <div style="color: #fff; background: rgba(0,0,0,0.8); padding: 20px; text-align: center; pointer-events: auto; font-family: sans-serif;">
+          <h3>⚠️ Error de Configuración de Overlay</h3>
+          <p>Falta el parámetro <code>userId</code> en la URL. Por favor, cópialo desde tu perfil en la web.</p>
+        </div>
+      `;
+    } else {
+      function connectSSE() {
+        const es = new EventSource(`/api/overlay/events?userId=${userId}`);
+        es.onmessage = (e) => {
+          try { 
+            const msg = JSON.parse(e.data); 
+            if (msg.type === 'incoming-curse' && msg.curse) {
+              showCurse(msg.curse); 
+            }
+          } catch(_) {}
+        };
+        es.onerror = () => { 
+          es.close(); 
+          setTimeout(connectSSE, 3000); 
+        };
+      }
+
+      connectSSE();
+
+      // QoL Test trigger
+      if (urlParams.get('test') === 'true') {
+        setTimeout(() => {
+          showCurse({
+            curseType: 'choice_band',
+            cardEmoji: '🎗️',
+            cardName: 'Choice Band',
+            fromUsername: 'RivalDePrueba',
+            description: 'MALDICION: Choice Band ficticia - solo el 1er movimiento por Pokemon'
+          });
+        }, 1500);
+      }
+    }
+  </script>
+</body>
+</html>

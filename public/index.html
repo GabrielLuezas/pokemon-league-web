@@ -839,6 +839,33 @@
           </button>
           <p class="profile-msg" id="profile-stream-msg"></p>
         </div>
+
+        <hr class="profile-divider" />
+
+        <!-- OBS Stream Overlay Section -->
+        <div class="profile-section">
+          <h3 class="profile-section-title">📺 Overlay de OBS (Streaming)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.4;">
+            Añade este enlace como "Fuente de Navegador" (Browser Source) en OBS (tamaño recomendado: 1920x1080) para mostrar en directo las notificaciones cuando te tiren cartas.
+          </p>
+          <div style="display: flex; gap: 8px;">
+            <input
+              type="text"
+              id="profile-obs-url"
+              class="profile-input"
+              style="flex: 1; font-family: monospace; font-size: 0.8rem; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px;"
+              readonly
+            />
+            <button
+              class="profile-btn"
+              style="width: auto; padding: 0 16px; white-space: nowrap; margin-top: 0; background: var(--theme-color);"
+              onclick="copyObsOverlayUrl()"
+            >
+              Copiar
+            </button>
+          </div>
+          <p class="profile-msg" id="profile-obs-msg" style="color: var(--theme-color-glow); margin-top: 6px;"></p>
+        </div>
       </div>
     </div>
 

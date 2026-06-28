@@ -11,6 +11,9 @@ const tournamentRoutes = require('./routes/tournament');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Active SSE clients for stream overlays
+const overlayClients = new Map(); // userId -> Array of res objects
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -195,6 +198,38 @@ app.get('/api/users/:id', async (req, res) => {
     }
 });
 
+// ===================== STREAM OVERLAY SSE ENDPOINT =====================
+
+app.get('/api/overlay/events', (req, res) => {
+    const userId = parseInt(req.query.userId);
+    if (!userId) {
+        return res.status(400).send('userId is required');
+    }
+    
+    res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+    });
+    res.write('\n');
+    
+    if (!overlayClients.has(userId)) {
+        overlayClients.set(userId, []);
+    }
+    overlayClients.get(userId).push(res);
+    
+    req.on('close', () => {
+        const clients = overlayClients.get(userId) || [];
+        const idx = clients.indexOf(res);
+        if (idx !== -1) {
+            clients.splice(idx, 1);
+        }
+        if (clients.length === 0) {
+            overlayClients.delete(userId);
+        }
+    });
+});
+
 // ===================== CARD CURSES ENDPOINT =====================
 
 app.post('/api/cards/curse/:targetUserId', authMiddleware, async (req, res) => {
@@ -274,6 +309,13 @@ app.post('/api/cards/curse/:targetUserId', authMiddleware, async (req, res) => {
 
         await pool.query('UPDATE save_data SET nuzlocke = $1 WHERE user_id = $2', [JSON.stringify(targetNuzlocke), targetUserId]);
         console.log(`[CARDS] Curse ${curseType} delivered from ${fromUsername} to user ${targetUserId}`);
+
+        // Broadcast the curse to any active OBS stream overlay clients
+        const clients = overlayClients.get(targetUserId) || [];
+        console.log(`[OVERLAY] Broadcasting curse to ${clients.length} OBS client(s) for user ${targetUserId}`);
+        clients.forEach(client => {
+            client.write(`data: ${JSON.stringify({ type: 'incoming-curse', curse })}\n\n`);
+        });
 
         res.json({ success: true, message: 'Maldición entregada al objetivo', stolenCard });
     } catch (err) {

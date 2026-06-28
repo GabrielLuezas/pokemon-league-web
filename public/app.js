@@ -1984,12 +1984,28 @@ function showProfileModal() {
     document.getElementById('profile-stream-platform').value = authUser.stream_platform || 'twitch';
     document.getElementById('profile-stream-channel').value = authUser.stream_channel || '';
 
+    // Pre-fill OBS overlay URL
+    document.getElementById('profile-obs-url').value = window.location.origin + '/overlay.html?userId=' + authUser.id;
+
     // Clear messages
     document.querySelectorAll('.profile-msg').forEach(el => { el.textContent = ''; el.className = 'profile-msg'; });
 }
 
 function closeProfileModal() {
     document.getElementById('profile-modal-overlay').classList.remove('visible');
+}
+
+function copyObsOverlayUrl() {
+    const input = document.getElementById('profile-obs-url');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(input.value);
+
+    const msgEl = document.getElementById('profile-obs-msg');
+    msgEl.textContent = '¡Enlace copiado! Pégalo en tu OBS como "Fuente de Navegador".';
+    setTimeout(() => {
+        msgEl.textContent = '';
+    }, 4000);
 }
 
 function previewProfileAvatar(input) {
