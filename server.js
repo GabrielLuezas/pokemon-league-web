@@ -374,8 +374,6 @@ function fetchUrlText(url) {
 }
 
 async function checkLiveStatus(platform, channel) {
-    return true; // Temporarily disabled live requirement for local testing
-    /*
     if (!platform || !channel) return false;
     const plat = platform.toLowerCase().trim();
     const chan = channel.toLowerCase().trim();
@@ -384,9 +382,12 @@ async function checkLiveStatus(platform, channel) {
 
     try {
         if (plat === 'twitch') {
-            const url = `https://twitch.tv/${chan}`;
-            const html = await fetchUrlText(url);
-            return html.includes('"isLiveBroadcast":true') || html.includes('"isLive":true');
+            return new Promise((resolve) => {
+                const url = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${chan}-440x248.jpg`;
+                https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } }, (res) => {
+                    resolve(res.statusCode === 200);
+                }).on('error', () => resolve(false));
+            });
         } else if (plat === 'youtube') {
             const url = `https://youtube.com/@${chan}/live`;
             const html = await fetchUrlText(url);
@@ -400,7 +401,6 @@ async function checkLiveStatus(platform, channel) {
         console.error(`[STREAM CHECK] Error checking ${platform} channel ${channel}:`, err.message);
     }
     return false;
-    */
 }
 
 async function updateAllLiveStatuses() {

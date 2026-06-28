@@ -2218,6 +2218,14 @@ function renderStreams() {
         else if (plat === 'youtube') link = `https://youtube.com/@${chan}/live`;
         else if (plat === 'kick') link = `https://kick.com/${chan}`;
 
+        // Preview thumbnail URL
+        let thumbUrl = 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=320&auto=format&fit=crop';
+        if (plat === 'twitch') {
+            thumbUrl = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${chan.toLowerCase().trim()}-320x180.jpg?t=${Date.now()}`;
+        } else if (plat === 'youtube') {
+            thumbUrl = `https://img.youtube.com/vi/live/hqdefault.jpg`;
+        }
+
         const card = document.createElement('a');
         card.href = link;
         card.target = '_blank';
@@ -2226,16 +2234,21 @@ function renderStreams() {
         const avatarHtml = renderAvatarCircle('match-avatar', initial, user.avatar_url);
 
         card.innerHTML = `
-            ${avatarHtml}
-            <div class="stream-info">
-                <div class="stream-username">${escapeHtml(user.username)}</div>
-                <div class="stream-channel">${escapeHtml(user.stream_channel)}</div>
-                <div class="stream-live-label">
-                    <span class="stream-live-dot"></span>
-                    <span>EN DIRECTO</span>
+            <div class="stream-thumbnail-container">
+                <img class="stream-thumbnail" src="${thumbUrl}" alt="Preview" onerror="this.src='https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=320&auto=format&fit=crop'">
+                <div class="stream-preview-overlay"></div>
+                <div class="stream-badge-row-top">
+                    <span class="stream-live-badge-red">EN DIRECTO</span>
+                    <span class="stream-platform-tag ${plat}">${plat}</span>
                 </div>
             </div>
-            <span class="stream-platform-badge ${plat}">${plat}</span>
+            <div class="stream-details-container">
+                ${avatarHtml}
+                <div class="stream-info">
+                    <div class="stream-username">${escapeHtml(user.username)}</div>
+                    <div class="stream-channel">${escapeHtml(user.stream_channel)}</div>
+                </div>
+            </div>
         `;
         grid.appendChild(card);
     });

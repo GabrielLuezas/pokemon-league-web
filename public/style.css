@@ -4166,51 +4166,106 @@ header p {
   background: var(--bg-card);
   border: 1px solid rgba(255, 71, 87, 0.15);
   border-radius: var(--radius-sm);
-  padding: 16px;
+  padding: 0;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   transition: all 0.3s ease;
   text-decoration: none;
   color: inherit;
   box-shadow: var(--shadow-card);
   position: relative;
+  overflow: hidden;
 }
 
 .stream-card:hover {
   background: var(--bg-card-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 71, 87, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(255, 71, 87, 0.2);
   border-color: rgba(255, 71, 87, 0.4);
 }
 
-.stream-platform-badge {
+.stream-thumbnail-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #09090f;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 71, 87, 0.1);
+}
+
+.stream-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.stream-card:hover .stream-thumbnail {
+  transform: scale(1.04);
+}
+
+.stream-preview-overlay {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  inset: 0;
+  background: linear-gradient(185deg, rgba(0,0,0,0.3) 0%, transparent 55%, rgba(0,0,0,0.8) 100%);
+  pointer-events: none;
+}
+
+.stream-badge-row-top {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.stream-live-badge-red {
+  background: var(--accent-red);
+  color: #fff;
   font-size: 0.65rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(255, 71, 87, 0.4);
+  letter-spacing: 0.5px;
 }
 
-.stream-platform-badge.twitch {
-  background: rgba(165, 94, 234, 0.2);
-  color: var(--accent-purple);
-  border: 1px solid rgba(165, 94, 234, 0.3);
+.stream-platform-tag {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
 }
 
-.stream-platform-badge.youtube {
-  background: rgba(255, 71, 87, 0.2);
-  color: var(--accent-red);
-  border: 1px solid rgba(255, 71, 87, 0.3);
+.stream-platform-tag.twitch {
+  background: #9146ff;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(145, 70, 255, 0.4);
 }
 
-.stream-platform-badge.kick {
-  background: rgba(32, 191, 107, 0.2);
-  color: var(--accent-green);
-  border: 1px solid rgba(32, 191, 107, 0.3);
+.stream-platform-tag.youtube {
+  background: #ff0000;
+  color: #fff;
+}
+
+.stream-platform-tag.kick {
+  background: #53fc18;
+  color: #000;
+}
+
+.stream-details-container {
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .stream-info {
