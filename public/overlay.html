@@ -69,6 +69,10 @@
   </style>
 </head>
 <body>
+  <div id="sound-warning" style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: #fff; border: 1px solid #ff9f43; border-radius: 8px; padding: 10px 16px; font-size: 0.85rem; font-family: Outfit, sans-serif; pointer-events: auto; cursor: pointer; z-index: 1000; transition: opacity 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+    <span>🔊</span>
+    <span>Haz clic aquí para activar el sonido en este navegador</span>
+  </div>
   <div id="curse-container"></div>
   <script>
     const CURSE_DURATION_MS = 12000;
@@ -97,10 +101,64 @@
     };
 
     function playAlertSound(isSevere) {
-      const soundUrl = isSevere 
-        ? 'https://assets.mixkit.co/active_storage/sfx/2869/2869-700.wav' // dramatic impact
-        : 'https://assets.mixkit.co/active_storage/sfx/1011/1011-700.wav'; // synth ding
-      new Audio(soundUrl).play().catch(() => {});
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const now = ctx.currentTime;
+        
+        if (isSevere) {
+          // Dramatic alarm sound (sawtooth pitch slide down + sine warning beep)
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.type = 'sawtooth';
+          osc1.frequency.setValueAtTime(150, now);
+          osc1.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+          gain1.gain.setValueAtTime(0.12, now);
+          gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc1.start(now);
+          osc1.stop(now + 0.4);
+          
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(320, now + 0.2);
+          osc2.frequency.exponentialRampToValueAtTime(180, now + 0.6);
+          gain2.gain.setValueAtTime(0.18, now + 0.2);
+          gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start(now + 0.2);
+          osc2.stop(now + 0.6);
+        } else {
+          // Clean arcade synth chime (double chime: D5 then A5)
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(587.33, now); // D5
+          gain1.gain.setValueAtTime(0.12, now);
+          gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc1.start(now);
+          osc1.stop(now + 0.35);
+          
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880.00, now + 0.08); // A5
+          gain2.gain.setValueAtTime(0.15, now + 0.08);
+          gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start(now + 0.08);
+          osc2.stop(now + 0.45);
+        }
+      } catch (e) {
+        console.warn("Web Audio API failed to play sound:", e);
+      }
     }
 
     function showCurse(curse) {
@@ -202,6 +260,28 @@
             description: 'MALDICION: Choice Band ficticia - solo el 1er movimiento por Pokemon'
           });
         }, 1500);
+      }
+      // Sound warning dismiss and activation
+      const warningEl = document.getElementById('sound-warning');
+      if (warningEl) {
+        warningEl.addEventListener('click', () => {
+          try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+              const ctx = new AudioContext();
+              ctx.resume();
+            }
+          } catch(_) {}
+          warningEl.style.opacity = '0';
+          setTimeout(() => warningEl.remove(), 300);
+        });
+        // Auto-hide after 8 seconds (so it doesn't get stuck on OBS stream)
+        setTimeout(() => {
+          if (document.getElementById('sound-warning')) {
+            warningEl.style.opacity = '0';
+            setTimeout(() => warningEl.remove(), 300);
+          }
+        }, 8000);
       }
     }
   </script>
