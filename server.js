@@ -230,39 +230,6 @@ app.get('/api/overlay/events', (req, res) => {
     });
 });
 
-// POST /api/overlay/use-card — Receive notification that a player used a card (any card)
-app.post('/api/overlay/use-card', async (req, res) => {
-    try {
-        const { userId, username, cardId, cardName, cardEmoji, effectType, curseType, description } = req.body;
-        
-        if (!userId) {
-            return res.status(400).json({ error: 'userId is required' });
-        }
-
-        const curse = {
-            fromUsername: username || 'Tú',
-            cardId,
-            cardName,
-            cardEmoji,
-            curseType: curseType || effectType || 'use_card',
-            description: description || `Ha usado la carta ${cardName}`,
-            timestamp: new Date().toISOString()
-        };
-
-        // Broadcast to this user's overlay clients (so they see their own card usage alert)
-        const clients = overlayClients.get(parseInt(userId)) || [];
-        console.log(`[OVERLAY] Broadcasting own card use of ${cardName} to ${clients.length} OBS client(s) for user ${userId}`);
-        clients.forEach(client => {
-            client.write(`data: ${JSON.stringify({ type: 'incoming-curse', curse })}\n\n`);
-        });
-
-        res.json({ success: true });
-    } catch (err) {
-        console.error('Use card overlay broadcast error:', err);
-        res.status(500).json({ error: 'Error in overlay broadcast' });
-    }
-});
-
 // ===================== CARD CURSES ENDPOINT =====================
 
 app.post('/api/cards/curse/:targetUserId', authMiddleware, async (req, res) => {
@@ -350,18 +317,7 @@ app.post('/api/cards/curse/:targetUserId', authMiddleware, async (req, res) => {
             client.write(`data: ${JSON.stringify({ type: 'incoming-curse', curse })}\n\n`);
         });
 
-        // Broadcast to sender's stream overlay so they see their own play
-        const senderClients = overlayClients.get(req.userId) || [];
-        console.log(`[OVERLAY] Broadcasting curse usage to sender ${req.userId} (${senderClients.length} clients)`);
-        senderClients.forEach(client => {
-            client.write(`data: ${JSON.stringify({ 
-                type: 'incoming-curse', 
-                curse: {
-                    ...curse,
-                    description: `Has usado la carta ${cardName} contra ${targetNuzlocke.trainer?.name || 'Rival'}: ${finalDescription}`
-                } 
-            })}\n\n`);
-        });
+
 
         res.json({ success: true, message: 'Maldición entregada al objetivo', stolenCard });
     } catch (err) {
