@@ -69,10 +69,6 @@
   </style>
 </head>
 <body>
-  <div id="sound-warning" style="position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: #fff; border: 1px solid #ff9f43; border-radius: 8px; padding: 10px 16px; font-size: 0.85rem; font-family: Outfit, sans-serif; pointer-events: auto; cursor: pointer; z-index: 1000; transition: opacity 0.3s; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
-    <span>🔊</span>
-    <span>Haz clic aquí para activar el sonido en este navegador</span>
-  </div>
   <div id="curse-container"></div>
   <script>
     const CURSE_DURATION_MS = 12000;
@@ -261,28 +257,7 @@
           });
         }, 1500);
       }
-      // Sound warning dismiss and activation
-      const warningEl = document.getElementById('sound-warning');
-      if (warningEl) {
-        warningEl.addEventListener('click', () => {
-          try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-              const ctx = new AudioContext();
-              ctx.resume();
-            }
-          } catch(_) {}
-          warningEl.style.opacity = '0';
-          setTimeout(() => warningEl.remove(), 300);
-        });
-        // Auto-hide after 8 seconds (so it doesn't get stuck on OBS stream)
-        setTimeout(() => {
-          if (document.getElementById('sound-warning')) {
-            warningEl.style.opacity = '0';
-            setTimeout(() => warningEl.remove(), 300);
-          }
-        }, 8000);
-      }
+
     }
   </script>
 </body>
