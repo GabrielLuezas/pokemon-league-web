@@ -1649,11 +1649,32 @@ function renderGymLeaders() {
             <div class="gym-leaders-grid">
         `;
         items.forEach(item => {
+            let badgeUrl = '';
+            if (title.includes('Team Skull')) {
+                badgeUrl = '/badges/team_skull.png';
+            } else if (title.includes('Paraíso Aether')) {
+                badgeUrl = '/badges/aether.png';
+            } else if (title.includes('Rainbow Rocket')) {
+                badgeUrl = '/badges/rainbow_rocket.png';
+            } else if (title.includes('Rivales')) {
+                if (item.name.toLowerCase().includes('gladio')) {
+                    badgeUrl = '/badges/gladion.png';
+                } else if (item.name.toLowerCase().includes('tilo') || item.name.toLowerCase().includes('dexio')) {
+                    badgeUrl = '/badges/hau.png';
+                } else {
+                    badgeUrl = '/badges/gladion.png'; // default
+                }
+            }
+
+            const imgHtml = badgeUrl 
+                ? `<img src="${badgeUrl}" class="gym-leader-badge-img" style="filter: drop-shadow(0 0 6px rgba(0, 210, 255, 0.3));" />` 
+                : '<div class="gym-leader-no-badge">🎯</div>';
+
             subHtml += `
                 <div class="gym-leader-card gym-generic-cap">
                     <div class="gym-leader-num generic-num">${icon}</div>
                     <div class="gym-leader-badge-wrap">
-                        <div class="gym-leader-no-badge">🎯</div>
+                        ${imgHtml}
                     </div>
                     <div class="gym-leader-info">
                         <div class="gym-leader-name">${escapeHtml(item.name)}</div>
