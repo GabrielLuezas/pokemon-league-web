@@ -72,6 +72,7 @@ async function loadTrainers() {
         }
 
         renderTrainers();
+        renderStreams();
         renderRankings();
         renderRoutes();
         renderGymLeaders();
@@ -231,15 +232,47 @@ function showTrainerList() {
 
 // ===================== KALOS BADGES =====================
 
-const KALOS_BADGES = [
-    { name: 'Escarabajo', img: '/badges/Medalla1.png' },
-    { name: 'Muro',       img: '/badges/Medalla2.png' },
-    { name: 'Combate',    img: '/badges/Medalla3.png' },
-    { name: 'Planta',     img: '/badges/Medalla4.png' },
-    { name: 'Voltaje',    img: '/badges/Medalla5.png' },
-    { name: 'Hada',       img: '/badges/Medalla6.png' },
-    { name: 'Psíquico',   img: '/badges/Medalla7.png' },
-    { name: 'Iceberg',    img: '/badges/Medalla8.png' },
+function getZCrystalSVG(colors, glow, symbol, name = '') {
+    const safeId = name 
+        ? name.toLowerCase().replace(/[^a-z0-9]/g, '') 
+        : 'sym_' + String(symbol).codePointAt(0);
+    return `
+    <svg viewBox="0 0 100 120" class="z-crystal-svg" style="filter: drop-shadow(0 0 6px ${glow}); width: 100%; height: 100%;">
+        <defs>
+            <linearGradient id="grad-${safeId}" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="${colors[0]}" />
+                <stop offset="50%" stop-color="${colors[1]}" />
+                <stop offset="100%" stop-color="${colors[2] || colors[1]}" />
+            </linearGradient>
+        </defs>
+        <polygon points="50,5 90,30 90,90 50,115 10,90 10,30" fill="url(#grad-${safeId})" stroke="rgba(255,255,255,0.7)" stroke-width="1.5" />
+        <polygon points="50,20 80,40 80,80 50,100 20,80 20,40" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="1" />
+        <line x1="50" y1="5" x2="50" y2="115" stroke="rgba(255,255,255,0.15)" />
+        <line x1="10" y1="60" x2="90" y2="60" stroke="rgba(255,255,255,0.1)" />
+        <text x="50" y="68" font-size="28" font-family="'Segoe UI Emoji', sans-serif" text-anchor="middle" fill="#ffffff" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${symbol}</text>
+    </svg>
+    `;
+}
+
+const ALOLA_Z_CRYSTALS = [
+    { name: 'Normastal Z',    trial: 'Prueba de Liam',          type: 'Normal',    colors: ['#A8A77A', '#C6C5A9', '#737255'], glow: '#A8A77A', symbol: '◯', img: '/badges/normastal.png' },
+    { name: 'Lizastal Z',     trial: 'Gran Prueba de Hala (Kahuna)',    type: 'Lucha',     colors: ['#C22E28', '#E35E59', '#8C1E1A'], glow: '#E35E59', symbol: '👊', img: '/badges/lizastal.png' },
+    { name: 'Hidrostal Z',    trial: 'Prueba de Nereida',        type: 'Agua',      colors: ['#6390F0', '#89AEF5', '#3D61B0'], glow: '#6390F0', symbol: '💧', img: '/badges/hidrostal.png' },
+    { name: 'Pirostal Z',     trial: 'Prueba de Kiawe',                 type: 'Fuego',     colors: ['#F08030', '#F5A670', '#B35310'], glow: '#F08030', symbol: '🔥', img: '/badges/pirostal.png' },
+    { name: 'Fitostal Z',     trial: 'Prueba de Lulú',         type: 'Planta',    colors: ['#78C850', '#9CD97F', '#4E962B'], glow: '#78C850', symbol: '🍃', img: '/badges/fitostal.png' },
+    { name: 'Litostal Z',     trial: 'Gran Prueba de Olivia (Kahuna)',  type: 'Roca',      colors: ['#B6A136', '#D1C26D', '#7A6B1F'], glow: '#B6A136', symbol: '🪨', img: '/badges/litostal.png' },
+    { name: 'Electrostal Z',    trial: 'Prueba de Chris',     type: 'Eléctrico', colors: ['#F7D02C', '#F9DE69', '#A18512'], glow: '#F7D02C', symbol: '⚡', img: '/badges/electrostal.png' },
+    { name: 'Espectrostal Z', trial: 'Prueba de Zarala',      type: 'Fantasma',  colors: ['#705797', '#9075B5', '#4A3469'], glow: '#9075B5', symbol: '👻', img: '/badges/espectrostal.png' },
+    { name: 'Nictostal Z',    trial: 'Gran Prueba de Denio (Kahuna)',     type: 'Siniestro', colors: ['#705746', '#8A6E5C', '#3C2D23'], glow: '#705746', symbol: '🌙', img: '/badges/nictostal.png' },
+    { name: 'Geostal Z',      trial: 'Gran Prueba de Hela',      type: 'Tierra',    colors: ['#E2BF65', '#EAD195', '#9E803A'], glow: '#E2BF65', symbol: '⛰️', img: '/badges/geostal.png' },
+    { name: 'Dracostal Z',    trial: 'Prueba del Cañón de Poni',        type: 'Dragón',    colors: ['#6F35FC', '#946BFA', '#4416B8'], glow: '#6F35FC', symbol: '🐲', img: '/badges/dracostal.png' },
+    { name: 'Feeristal Z',    trial: 'Prueba de Rika',           type: 'Hada',      colors: ['#D685AD', '#E4B5CD', '#9C4E75'], glow: '#D685AD', symbol: '✨', img: '/badges/feeristal.png' },
+    { name: 'Aerostal Z',     trial: 'Encontrado en la Colina Dequil',  type: 'Volador',   colors: ['#A890F0', '#C6B7F5', '#725AB0'], glow: '#A890F0', symbol: '🌪️', img: '/badges/aerostal.png' },
+    { name: 'Insectostal Z',  trial: 'Encontrado en la Mansión Po',     type: 'Bicho',     colors: ['#A8B820', '#C6D160', '#738010'], glow: '#A8B820', symbol: '🐛', img: '/badges/insectostal.png' },
+    { name: 'Criostal Z',     trial: 'Encontrado en el Monte Lanakila',  type: 'Hielo',     colors: ['#98D8D8', '#BCE6E6', '#59A6A6'], glow: '#98D8D8', symbol: '❄️', img: '/badges/criostal.png' },
+    { name: 'Toxistal Z',     trial: 'Regalo de Plumeria',              type: 'Veneno',    colors: ['#A040A0', '#C183C1', '#6D2B6D'], glow: '#A040A0', symbol: '☠️', img: '/badges/toxistal.png' },
+    { name: 'Metalostal Z',   trial: 'Regalo de Molayne',               type: 'Acero',     colors: ['#B8B8D0', '#D1D1E0', '#7B7B9C'], glow: '#B8B8D0', symbol: '⚙️', img: '/badges/metalostal.png' },
+    { name: 'Psicostal Z',   trial: 'Encontrado en el Desierto de Hano',type: 'Psíquico',  colors: ['#F85888', '#FA94B3', '#A93A5C'], glow: '#F85888', symbol: '🔮', img: '/badges/psicostal.png' },
 ];
 
 let activeDetailTab = 'actual';
@@ -304,6 +337,14 @@ function renderTrainerDetail(user) {
                 </div>
                 <div class="graveyard-grid" id="detail-graveyard-grid"></div>
             </section>
+            <section class="cards-section" id="detail-cards" style="display:none; margin-top: 25px;">
+                <div class="section-title">
+                    <span class="icon">🃏</span>
+                    <span>Mano de Cartas</span>
+                    <span class="count" id="detail-cards-count">0</span>
+                </div>
+                <div class="cards-grid" id="detail-cards-grid" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:15px; justify-content: flex-start;"></div>
+            </section>
         </div>
     `;
 
@@ -312,6 +353,7 @@ function renderTrainerDetail(user) {
     renderDetailBoxTabs(boxes);
     renderDetailBox(0, boxes);
     renderDetailGraveyard(nuzlocke);
+    renderDetailCards(nuzlocke);
 }
 
 function switchDetailTab(tab) {
@@ -326,8 +368,8 @@ function switchDetailTab(tab) {
 /**
  * Auto-detect whether DB values are raw counts (new app v1.7.1+) or pre-multiplied (old app).
  * Raw counts: earned ≤ 100 (max ~60 challenges), deaths ≤ reasonable count.
- * Pre-multiplied: earned is already multiplied by 100 (e.g. 5700).
- * Returns { displayEarned, displayDeaths, displaySpent, displayPoints }.
+ * Pre-multiplied: earned is pre-multiplied by 100 (e.g. 5700).
+ * Returns { displayEarned, displayDeaths, displaySpent, displayPoints, challengePoints, cardBonus, spendablePoints }.
  */
 function getNuzlockePointsDisplay(user, fallbackDeaths) {
     const earned = user.nuzlocke_points_earned ?? 0;
@@ -342,10 +384,20 @@ function getNuzlockePointsDisplay(user, fallbackDeaths) {
     const displayEarned = isRawFormat ? earned * 100 : earned;
     const displayDeaths = isRawFormat ? deaths * 50  : deaths;
     const displaySpent  = spent;
-    // Always compute from raw values to ensure accuracy
-    const displayPoints = displayEarned - displayDeaths - displaySpent;
+    
+    // Puntos de retos menos los puntos gastados en la tienda (los bonos de cartas NO se incluyen)
+    const challengePoints = displayEarned - displayDeaths - displaySpent;
 
-    return { displayEarned, displayDeaths, displaySpent, displayPoints };
+    // Puntos de cartas de la ruleta obtenidos como bonus
+    const cardBonus = user.nuzlocke?.bonusPoints ?? 0;
+
+    // Puntos disponibles actuales para tienda (saldo spendable)
+    const spendablePoints = user.nuzlocke_points ?? (displayEarned + cardBonus - displayDeaths - displaySpent);
+
+    // Mantener displayPoints como el puntaje oficial de los retos (para el ranking)
+    const displayPoints = challengePoints;
+
+    return { displayEarned, displayDeaths, displaySpent, displayPoints, challengePoints, cardBonus, spendablePoints };
 }
 
 function renderActualContent(user) {
@@ -369,13 +421,17 @@ function renderActualContent(user) {
 
     // Points: auto-detect raw counts vs pre-multiplied, use nuzlocke_points as total
     const stats = getTrainerStats(user);
-    const { displayEarned, displayDeaths, displaySpent, displayPoints } = getNuzlockePointsDisplay(user, stats.deaths);
+    const { displayEarned, displayDeaths, displaySpent, displayPoints, challengePoints, cardBonus, spendablePoints } = getNuzlockePointsDisplay(user, stats.deaths);
 
-    const badgesHTML = KALOS_BADGES.map((badge, i) => {
+    const badgesHTML = ALOLA_Z_CRYSTALS.map((z, i) => {
         const earned = badges[i] || false;
+        const svgContent = getZCrystalSVG(z.colors, earned ? z.glow : 'transparent', z.symbol, z.name);
         return `<div class="badge-item${earned ? ' earned' : ''}">
-            <img class="badge-icon" src="${badge.img}" alt="${badge.name}" />
-            <span class="badge-label">${badge.name}</span>
+            <div class="badge-svg-container ${earned ? 'earned' : 'locked'}" style="width: 48px; height: 58px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; position: relative;">
+                <img src="${z.img}" style="display: none; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 6px ${earned ? z.glow : 'transparent'})" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />
+                <div style="width: 100%; height: 100%;">${svgContent}</div>
+            </div>
+            <span class="badge-label">${z.name}</span>
         </div>`;
     }).join('');
 
@@ -418,29 +474,47 @@ function renderActualContent(user) {
             </div>
         </div>
 
-        <section class="detail-points-panel">
-            <div class="detail-points-header">
-                <span>🏆</span>
-                <span>Puntos Nuzlocke</span>
+        <section class="detail-points-panel" style="padding: 20px 16px;">
+            <div style="display: flex; gap: 20px; justify-content: center; align-items: stretch; flex-wrap: wrap;">
+                <!-- Columna Izquierda: Puntos de Retos -->
+                <div style="flex: 1; min-width: 180px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="detail-points-header" style="margin-bottom: 6px;">
+                        <span>🏆</span>
+                        <span>Puntos de Retos (Web)</span>
+                    </div>
+                    <div class="detail-points-total" style="font-size: 2.2rem; margin-bottom: 6px;">${challengePoints}</div>
+                    <div class="detail-points-badges" style="margin-bottom: 0;">
+                        <span class="points-badge earned">+${displayEarned}</span>
+                        ${displayDeaths > 0 ? `<span class="points-badge penalty">-${displayDeaths}</span>` : ''}
+                    </div>
+                </div>
+                <!-- Separador -->
+                <div style="width: 1px; background: rgba(0, 210, 255, 0.2); align-self: stretch;"></div>
+                <!-- Columna Derecha: Puntos Disponibles -->
+                <div style="flex: 1; min-width: 180px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div class="detail-points-header" style="margin-bottom: 6px;">
+                        <span>💰</span>
+                        <span>Puntos Disponibles</span>
+                    </div>
+                    <div class="detail-points-total" style="font-size: 2.2rem; margin-bottom: 6px;">${spendablePoints}</div>
+                    <div class="detail-points-badges" style="margin-bottom: 0;">
+                        ${cardBonus > 0 ? `<span class="points-badge earned" style="background: rgba(140, 122, 230, 0.2); border-color: rgba(140, 122, 230, 0.4);">+${cardBonus} cartas</span>` : ''}
+                        ${displaySpent > 0 ? `<span class="points-badge spent">-${displaySpent} gastados</span>` : ''}
+                    </div>
+                </div>
             </div>
-            <div class="detail-points-total">${displayPoints}</div>
-            <div class="detail-points-badges">
-                <span class="points-badge earned">+${displayEarned}</span>
-                ${displayDeaths > 0 ? `<span class="points-badge penalty">-${displayDeaths} muertes</span>` : ''}
-                ${displaySpent  > 0 ? `<span class="points-badge spent">-${displaySpent} gastados</span>` : ''}
+            <div class="detail-points-breakdown" style="margin-top: 14px; border-top: 1px solid rgba(0, 210, 255, 0.15); padding-top: 10px;">
+                ${displayDeaths > 0 ? `<div class="detail-points-item penalty" style="display:inline-block; margin-right: 15px;">💀 Penalidad muertes: -${displayDeaths}</div>` : ''}
+                ${displaySpent > 0 ? `<div class="detail-points-item spent" style="display:inline-block; margin-right: 15px;">🛒 Gastados en tienda: -${displaySpent}</div>` : ''}
+                ${stats.shinys > 0 ? `<div class="detail-points-shiny" style="display:inline-block;">✨ Shinys encontrados: ${stats.shinys}</div>` : ''}
             </div>
-            <div class="detail-points-breakdown">
-                ${displayDeaths > 0 ? `<div class="detail-points-item penalty">💀 Penalidad muertes: -${displayDeaths}</div>` : ''}
-                ${displaySpent > 0 ? `<div class="detail-points-item spent">🛒 Gastados en tienda: -${displaySpent}</div>` : ''}
-            </div>
-            ${stats.shinys > 0 ? `<div class="detail-points-shiny">✨ Shinys encontrados: ${stats.shinys}</div>` : ''}
         </section>
 
         <section class="actual-badges-section">
             <div class="section-title">
-                <span class="icon">🏅</span>
-                <span>Medallas de Kalos</span>
-                <span class="count">${badgeCount}/8</span>
+                <span class="icon">💎</span>
+                <span>Cristales Z de Alola</span>
+                <span class="count">${badgeCount}/${ALOLA_Z_CRYSTALS.length}</span>
             </div>
             <div class="badges-grid">${badgesHTML}</div>
         </section>
@@ -646,6 +720,55 @@ function renderDetailGraveyard(nuzlocke) {
             </div>
         `;
         grid.appendChild(card);
+    });
+}
+
+// ===================== TRAINER HAND CARDS =====================
+
+function renderDetailCards(nuzlocke) {
+    const section = document.getElementById('detail-cards');
+    const grid = document.getElementById('detail-cards-grid');
+    if (!section || !grid) return;
+
+    const cards = (nuzlocke.cards && nuzlocke.cards.pulled) || [];
+    const unusedCards = cards.filter(c => !c.usedAt);
+
+    if (unusedCards.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    document.getElementById('detail-cards-count').textContent = unusedCards.length;
+    grid.innerHTML = '';
+
+    unusedCards.forEach(c => {
+        const cardEl = document.createElement('div');
+        cardEl.style.cssText = `
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid ${c.color || 'rgba(255,255,255,0.1)'}88;
+            border-radius: 12px;
+            padding: 10px 14px;
+            width: calc(33% - 8px);
+            min-width: 140px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        `;
+        
+        cardEl.innerHTML = `
+            <div style="font-size: 1.6rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${c.emoji || '🃏'}</div>
+            <div style="flex-grow: 1; overflow: hidden; z-index: 1;">
+                <div style="font-weight: 700; font-size: 0.85rem; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">${escapeHtml(c.rarity || 'Común')}</div>
+            </div>
+            <div style="position: absolute; right: -15px; bottom: -15px; font-size: 3.5rem; opacity: 0.05; font-weight: 900; pointer-events: none;">${c.emoji || '🃏'}</div>
+        `;
+        grid.appendChild(cardEl);
     });
 }
 
@@ -1024,8 +1147,9 @@ function renderRankings() {
         return {
             user,
             ...ts,
-            // Use nuzlocke_points (always correct) with auto-detect fallback
             displayPoints: pts.displayPoints,
+            challengePoints: pts.challengePoints,
+            spendablePoints: pts.spendablePoints,
         };
     });
 
@@ -1034,9 +1158,9 @@ function renderRankings() {
 
     buildRankingCategory(
         'ranking-points',
-        [...stats].sort((a, b) => b.displayPoints - a.displayPoints),
-        s => s.displayPoints,
-        v => `${v} pts`,
+        [...stats].sort((a, b) => b.challengePoints - a.challengePoints),
+        s => s.challengePoints,
+        (v, s) => `${v} pts (${s.spendablePoints} disp.)`,
         loggedUsername,
         'puntos'
     );
@@ -1116,7 +1240,7 @@ function buildRankingCategory(containerId, sorted, getValue, formatVal, loggedUs
                 ${avatarHTML(entry, size, `podium-avatar-${pos}`)}
                 <div class="podium-medal">${medal}</div>
                 <div class="podium-name">${escapeHtml(entry.user.username)}</div>
-                <div class="podium-value">${formatVal(getValue(entry))}</div>
+                <div class="podium-value">${formatVal(getValue(entry), entry)}</div>
                 <div class="podium-rank-bar ${pos}"></div>
             </div>
         `;
@@ -1140,7 +1264,7 @@ function buildRankingCategory(containerId, sorted, getValue, formatVal, loggedUs
                     <span class="rank-pos">#${entry.rank}</span>
                     ${avatarEl}
                     <span class="rank-name">${escapeHtml(entry.user.username)}</span>
-                    <span class="rank-value">${formatVal(getValue(entry))}</span>
+                    <span class="rank-value">${formatVal(getValue(entry), entry)}</span>
                 </div>
             `;
         });
@@ -1153,7 +1277,7 @@ function buildRankingCategory(containerId, sorted, getValue, formatVal, loggedUs
         footerHTML = `
             <div class="ranking-user-footer">
                 <span class="ranking-user-footer-icon">🎖️</span>
-                <span>Tú estás <strong>top ${loggedEntry.rank}</strong> con <strong>${formatVal(getValue(loggedEntry))}</strong> ${unitLabel}</span>
+                <span>Tú estás <strong>top ${loggedEntry.rank}</strong> con <strong>${formatVal(getValue(loggedEntry), loggedEntry)}</strong> ${unitLabel}</span>
             </div>
         `;
     }
@@ -1178,89 +1302,88 @@ function switchInfoTab(tab) {
 // ===================== GYM LEADERS =====================
 
 const GYM_LEADERS = [
-    {
-        num: 1,
-        name: 'Violeta',
-        gym: 'Ciudad Novarte',
-        level: 14,
-        badge: '/badges/Medalla1.png',
-        badgeName: 'Medalla Escarabajo',
-    },
-    {
-        num: 2,
-        name: 'Lino',
-        gym: 'Ciudad Relieve',
-        level: 30,
-        badge: '/badges/Medalla2.png',
-        badgeName: 'Medalla Muro',
-    },
-    {
-        num: 3,
-        name: 'Corelia',
-        gym: 'Ciudad Yantra',
-        level: 38,
-        badge: '/badges/Medalla3.png',
-        badgeName: 'Medalla Combate',
-    },
-    {
-        num: 4,
-        name: 'Amaro',
-        gym: 'Ciudad Témpera',
-        level: 41,
-        badge: '/badges/Medalla4.png',
-        badgeName: 'Medalla Planta',
-    },
-    {
-        num: 5,
-        name: 'Lem',
-        gym: 'Ciudad Luminalia',
-        level: 44,
-        badge: '/badges/Medalla5.png',
-        badgeName: 'Medalla Voltaje',
-    },
-    {
-        num: 6,
-        name: 'Valeria',
-        gym: 'Ciudad Romantis',
-        level: 50,
-        badge: '/badges/Medalla6.png',
-        badgeName: 'Medalla Hada',
-    },
-    {
-        num: 7,
-        name: 'Tileo',
-        gym: 'Ciudad Fluxus',
-        level: 58,
-        badge: '/badges/Medalla7.png',
-        badgeName: 'Medalla Psíquico',
-    },
-    {
-        num: 8,
-        name: 'Édel',
-        gym: 'Ciudad Fractal',
-        level: 71,
-        badge: '/badges/Medalla8.png',
-        badgeName: 'Medalla Iceberg',
-    },
+    { num: 1,  name: 'Totem Normastal',     gym: 'Prueba Normal (Liam)',    level: 14, badgeName: 'Normastal Z' },
+    { num: 2,  name: 'Kaudan (Kahuna)',     gym: 'Gran Prueba Lucha',       level: 19, badgeName: 'Lizastal Z' },
+    { num: 3,  name: 'Totem Hidrostal',     gym: 'Prueba Agua (Nereida)',   level: 24, badgeName: 'Hidrostal Z' },
+    { num: 4,  name: 'Totem Pirostal',      gym: 'Prueba Fuego (Kiawe)',    level: 26, badgeName: 'Pirostal Z' },
+    { num: 5,  name: 'Totem Fitostal',      gym: 'Prueba Planta (Lulú)',    level: 29, badgeName: 'Fitostal Z' },
+    { num: 6,  name: 'Mayla (Kahuna)',      gym: 'Gran Prueba Roca',        level: 34, badgeName: 'Litostal Z' },
+    { num: 7,  name: 'Totem Electrostal',   gym: 'Prueba Eléctrico (Chris)',level: 40, badgeName: 'Electrostal Z' },
+    { num: 8,  name: 'Totem Espectrostal',  gym: 'Prueba Fantasma (Zarala)',level: 42, badgeName: 'Espectrostal Z' },
+    { num: 9,  name: 'Denio (Kahuna)',      gym: 'Gran Prueba Siniestro',   level: 53, badgeName: 'Nictostal Z' },
+    { num: 10, name: 'Totem Dracostal',     gym: 'Prueba Dragón (Cañón)',   level: 59, badgeName: 'Dracostal Z' },
+    { num: 11, name: 'Prueba de Rika',      gym: 'Entrenadores Pétalos: Lv. 61 / Dominante: Lv. 66', level: '61 / 66', badgeName: 'Feeristal Z' },
+    { num: 12, name: 'Hela (Kahuna)',       gym: 'Gran Prueba Tierra',      level: 65, badgeName: 'Geostal Z' }
 ];
 
 const ELITE_FOUR = [
     {
         num: 'E4',
-        name: 'Alto Mando',
-        gym: 'Liga Pokémon',
+        name: 'Molayne / Olivia / Zarala / Kahili',
+        gym: 'Alto Mando Alola',
         icon: '⚔️',
-        level: 78,
+        level: 68,
         isElite: true,
     },
     {
         num: 'C',
-        name: 'Dianta',
-        gym: 'Campeona',
+        name: 'Combate de Campeón (Hau)',
+        gym: 'Defensa del Título',
         icon: '🏆',
-        level: 82,
+        level: 71,
         isChampion: true,
     },
+];
+
+const RETOS_TEAM_SKULL = [
+    { name: 'Playa Big Wave (Mantine)', desc: 'Ayuda al Mantine de los secuaces del Team Skull', level: '-' },
+    { name: 'Ruta 6 (Reclutas)', desc: 'Ayudar a Hela venciendo a los reclutas del Team Skull', level: '-' },
+    { name: 'Túnel Diglett (Reclutas)', desc: 'Aliate con Tilo para vencer a los reclutas del Team Skull', level: '-' },
+    { name: 'Colina Recuerdo (Reclutas)', desc: 'Ayuda al Slowpoke venciendo a los reclutas del Team Skull', level: '-' },
+    { name: 'Francine (Afueras de Alola)', desc: 'Vence a Francine en las afueras de Alola', level: 32 },
+    { name: 'Ruta 10 (Reclutas Parada Bus)', desc: 'Vence a los reclutas del Team Skull en la parada del bus', level: '-' },
+    { name: 'Guzmán (Parque de Malíe)', desc: 'Vence a Guzmán en el parque de Malíe', level: 41 },
+    { name: 'Ruta 15 (Salvar a Lylia)', desc: 'Salva a Lylia del recluta del Team Skull', level: '-' },
+    { name: 'Francine (Ruta 15)', desc: 'Vence a Francine en la ruta 15', level: 46 },
+    { name: 'Guzmán (Pueblo Po)', desc: 'Vence a Guzmán en pueblo Po', level: 49 },
+    { name: 'Paso de Poni (Reclutas)', desc: 'Vence a los reclutas del Team Skull en el antiguo paso de Poni', level: '-' }
+];
+
+const RETOS_AETHER = [
+    { name: 'Director Fabio (Puerto)', desc: 'Vence al Director Fabio al subir por el ascensor desde el puerto', level: '-' },
+    { name: 'Director Fabio & Tilo (Exterior)', desc: 'Vence al Director Fabio junto a Tilo para salir al exterior', level: 54 },
+    { name: 'Guzmán (Exterior)', desc: 'Vence a Guzmán en el exterior', level: 54 },
+    { name: 'Samina (Laboratorio)', desc: 'Vence a Samina en su laboratorio', level: 56 }
+];
+
+const RETOS_RIVALES = [
+    { name: 'Tilo (Ruta 3)', desc: 'Combate contra Tilo en la ruta 3', level: 16 },
+    { name: 'Dexio (Ciudad Kentai)', desc: 'Combate contra Dexio en ciudad Kentai', level: 19 },
+    { name: 'Tilo (Pueblo Ohana)', desc: 'Combate contra Tilo en pueblo Ohana', level: 19 },
+    { name: 'Gladio (Ruta 5)', desc: 'Combate contra Gladio en la ruta 5', level: 22 },
+    { name: 'Tilo (Ciudad Malíe)', desc: 'Combate contra Tilo en Ciudad Malíe', level: 36 },
+    { name: 'Gladio (Ruta 15)', desc: 'Combate contra Gladio en la ruta 15', level: 52 },
+    { name: 'Gladio (Monte Lanakila)', desc: 'Combate contra Gladio en el inicio del monte Lanakila', level: 66 }
+];
+
+const RETOS_UNIDAD_ULTRA = [
+    { name: 'Darius (Cueva Unemar)', desc: 'Combate contra Darius en la cueva Unemar', level: 16 },
+    { name: 'Darius (Rancho Ohana)', desc: 'Combate en Rancho Ohana tras quitar los Sudowoodo', level: 24 },
+    { name: 'Nihilego Dominante (Paraíso)', desc: 'Combate contra Nihilego dominante en el Paraíso Aether', level: 32 },
+    { name: 'Darius (Paraíso Aether)', desc: 'Combate antes de entrar a la habitación de Samina contra Darius', level: 56 },
+    { name: 'Darius (Cañón de Poni)', desc: 'Combate contra Darius en el cañón de Poni', level: 59 },
+    { name: 'Ultra Necrozma (Torre)', desc: 'Combate contra Ultra Necrozma en la Torre Ultrópolis', level: '-' }
+];
+
+const RETOS_RAINBOW_ROCKET = [
+    { name: 'Primeros Entrenadores (Castillo)', desc: 'Primeros combates del episodio Rainbow Rocket', level: 73 },
+    { name: 'Fabio (Entrada Castillo)', desc: 'Vence a Fabio en la entrada del castillo Rocket', level: 76 },
+    { name: 'Aquiles (Castillo Rocket)', desc: 'Vence a Aquiles en el castillo Rocket', level: 79 },
+    { name: 'Magno (Castillo Rocket)', desc: 'Vence a Magno en el castillo Rocket', level: 79 },
+    { name: 'Helio (Castillo Rocket)', desc: 'Vence a Helio en el castillo Rocket', level: 80 },
+    { name: 'Lysson (Castillo Rocket)', desc: 'Vence a Lysson en el castillo Rocket', level: 80 },
+    { name: 'Gechis (Castillo Rocket)', desc: 'Vence a Gechis en el castillo Rocket', level: 82 },
+    { name: 'Giovanni (Castillo Rocket)', desc: 'Vence a Giovanni en el castillo Rocket', level: 84 }
 ];
 
 function renderGymLeaders() {
@@ -1272,17 +1395,20 @@ function renderGymLeaders() {
     // Gym leaders title
     html += `
         <div class="gym-leaders-header">
-            <div class="section-title"><span class="icon">🏟️</span><span>Líderes de Gimnasio</span></div>
+            <div class="section-title"><span class="icon">🏝️</span><span>Pruebas y Kahunas de Alola</span></div>
         </div>
         <div class="gym-leaders-grid">
     `;
 
     GYM_LEADERS.forEach(leader => {
+        const z = ALOLA_Z_CRYSTALS.find(x => x.name === leader.badgeName);
+        const svgContent = z ? getZCrystalSVG(z.colors, z.glow, z.symbol, z.name) : '';
         html += `
             <div class="gym-leader-card">
                 <div class="gym-leader-num">#${leader.num}</div>
-                <div class="gym-leader-badge-wrap">
-                    <img src="${leader.badge}" alt="${leader.badgeName}" class="gym-leader-badge-img" onerror="this.style.opacity='0.3'" />
+                <div class="gym-leader-badge-wrap" style="position: relative;">
+                    ${z ? `<img src="${z.img}" class="gym-leader-badge-img" style="display: none; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 8px ${z.glow})" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" />` : ''}
+                    <div style="width: 100%; height: 100%;">${svgContent}</div>
                 </div>
                 <div class="gym-leader-info">
                     <div class="gym-leader-name">${escapeHtml(leader.name)}</div>
@@ -1301,7 +1427,7 @@ function renderGymLeaders() {
     // Elite Four & Champion
     html += `
         <div class="gym-leaders-header" style="margin-top:40px">
-            <div class="section-title"><span class="icon">👑</span><span>Élite y Campeona</span></div>
+            <div class="section-title"><span class="icon">👑</span><span>Alto Mando y Defensor</span></div>
         </div>
         <div class="gym-leaders-grid gym-elite-grid">
     `;
@@ -1328,6 +1454,42 @@ function renderGymLeaders() {
 
     html += '</div>';
 
+    // Add extra categories
+    function renderGenericLevelCaps(title, icon, items) {
+        let subHtml = `
+            <div class="gym-leaders-header" style="margin-top: 40px;">
+                <div class="section-title"><span class="icon">${icon}</span><span>${title}</span></div>
+            </div>
+            <div class="gym-leaders-grid">
+        `;
+        items.forEach(item => {
+            subHtml += `
+                <div class="gym-leader-card gym-generic-cap">
+                    <div class="gym-leader-num generic-num">${icon}</div>
+                    <div class="gym-leader-badge-wrap">
+                        <div class="gym-leader-no-badge">🎯</div>
+                    </div>
+                    <div class="gym-leader-info">
+                        <div class="gym-leader-name">${escapeHtml(item.name)}</div>
+                        <div class="gym-leader-gym">${escapeHtml(item.desc)}</div>
+                    </div>
+                    <div class="gym-leader-level">
+                        <span class="gym-level-label">Nivel</span>
+                        <span class="gym-level-value">${item.level}</span>
+                    </div>
+                </div>
+            `;
+        });
+        subHtml += '</div>';
+        return subHtml;
+    }
+
+    html += renderGenericLevelCaps('Retos Villanos (Team Skull)', '💀', RETOS_TEAM_SKULL);
+    html += renderGenericLevelCaps('Retos Paraíso Aether', '🏢', RETOS_AETHER);
+    html += renderGenericLevelCaps('Retos Combates Rivales', '⚔️', RETOS_RIVALES);
+    html += renderGenericLevelCaps('Combates contra la Unidad Ultra', '🛸', RETOS_UNIDAD_ULTRA);
+    html += renderGenericLevelCaps('Postgame: Episodio Rainbow Rocket', '🌈', RETOS_RAINBOW_ROCKET);
+
     container.innerHTML = html;
 }
 
@@ -1351,10 +1513,15 @@ const POKEMON_BANNED = [
     { id: 643, name: 'Reshiram', bst: 680 },
     { id: 644, name: 'Zekrom', bst: 680 },
     { id: 646, name: 'Kyurem', bst: 660 },
-    { id: 646, form: 'Black', name: 'Kyurem Negro', bst: 700 },
-    { id: 646, form: 'White', name: 'Kyurem Blanco', bst: 700 },
+    { id: 10022, form: 'Black', name: 'Kyurem Negro', bst: 700 },
+    { id: 10023, form: 'White', name: 'Kyurem Blanco', bst: 700 },
     { id: 716, name: 'Xerneas', bst: 680 },
     { id: 717, name: 'Yveltal', bst: 680 },
+    { id: 791, name: 'Solgaleo', bst: 680 },
+    { id: 792, name: 'Lunala', bst: 680 },
+    { id: 10155, form: 'Dusk Mane', name: 'Necrozma Melena Crepuscular', bst: 680 },
+    { id: 10156, form: 'Dawn Wings', name: 'Necrozma Alas del Alba', bst: 680 },
+    { id: 10157, form: 'Ultra', name: 'Ultra Necrozma', bst: 754 },
 
     // --- CASOS ESPECIALES BANEADOS ---
     { id: 289, name: 'Slaking', bst: 670, reason: 'BST de Legendario y sin Ausente' },
@@ -1377,6 +1544,12 @@ const POKEMON_ALLOWED_SPECIAL = [
     { id: 647, name: 'Keldeo' }, { id: 648, name: 'Meloetta' }, { id: 649, name: 'Genesect' },
     { id: 718, name: 'Zygarde' }, { id: 719, name: 'Diancie' }, { id: 720, name: 'Hoopa' },
     { id: 721, name: 'Volcanion' },
+
+    // Gen 7: Tapus y Ultraentes
+    { id: 785, name: 'Tapu Koko' }, { id: 786, name: 'Tapu Lele' }, { id: 787, name: 'Tapu Bulu' }, { id: 788, name: 'Tapu Fini' },
+    { id: 793, name: 'Nihilego' }, { id: 794, name: 'Buzzwole' }, { id: 795, name: 'Pheromosa' }, { id: 796, name: 'Xurkitree' },
+    { id: 797, name: 'Celesteela' }, { id: 798, name: 'Kartana' }, { id: 799, name: 'Guzzlord' }, { id: 803, name: 'Poipole' },
+    { id: 804, name: 'Naganadel' }, { id: 805, name: 'Stakataka' }, { id: 806, name: 'Blacephalon' }
 ];
 
 function renderPokemonList() {
@@ -1478,6 +1651,8 @@ async function handleLogin(e) {
         localStorage.setItem('username', data.user.username);
         localStorage.setItem('userId', data.user.id);
         localStorage.setItem('avatarUrl', data.user.avatar_url || '');
+        localStorage.setItem('streamPlatform', data.user.stream_platform || '');
+        localStorage.setItem('streamChannel', data.user.stream_channel || '');
         updateAuthUI();
         closeAuthModal();
         loadTournament();
@@ -1490,14 +1665,21 @@ async function handleRegister(e) {
     e.preventDefault();
     const username = document.getElementById('register-user').value.trim();
     const password = document.getElementById('register-pass').value;
+    const stream_platform = document.getElementById('register-platform').value;
+    const stream_channel = document.getElementById('register-channel').value.trim();
     const errorEl = document.getElementById('register-error');
     errorEl.textContent = '';
+
+    if (!stream_platform || !stream_channel) {
+        errorEl.textContent = 'El directo y la plataforma son obligatorios';
+        return;
+    }
 
     try {
         const res = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ username, password, stream_platform, stream_channel })
         });
         const data = await res.json();
         if (!res.ok) { errorEl.textContent = data.error || 'Error'; return; }
@@ -1508,6 +1690,8 @@ async function handleRegister(e) {
         localStorage.setItem('username', data.user.username);
         localStorage.setItem('userId', data.user.id);
         localStorage.setItem('avatarUrl', data.user.avatar_url || '');
+        localStorage.setItem('streamPlatform', data.user.stream_platform || '');
+        localStorage.setItem('streamChannel', data.user.stream_channel || '');
         updateAuthUI();
         closeAuthModal();
         loadTournament();
@@ -1523,6 +1707,8 @@ function logout() {
     localStorage.removeItem('username');
     localStorage.removeItem('userId');
     localStorage.removeItem('avatarUrl');
+    localStorage.removeItem('streamPlatform');
+    localStorage.removeItem('streamChannel');
     updateAuthUI();
 }
 
@@ -1531,9 +1717,17 @@ function restoreAuth() {
     const username = localStorage.getItem('username');
     const userId = localStorage.getItem('userId');
     const avatarUrl = localStorage.getItem('avatarUrl');
+    const streamPlatform = localStorage.getItem('streamPlatform');
+    const streamChannel = localStorage.getItem('streamChannel');
     if (token && username && userId) {
         authToken = token;
-        authUser = { id: parseInt(userId), username, avatar_url: avatarUrl || null };
+        authUser = {
+            id: parseInt(userId),
+            username,
+            avatar_url: avatarUrl || null,
+            stream_platform: streamPlatform || null,
+            stream_channel: streamChannel || null
+        };
     }
     updateAuthUI();
 }
@@ -1599,6 +1793,10 @@ function showProfileModal() {
     document.getElementById('profile-username-pass').value = '';
     document.getElementById('profile-current-pass').value = '';
     document.getElementById('profile-new-pass').value = '';
+
+    // Pre-fill stream settings
+    document.getElementById('profile-stream-platform').value = authUser.stream_platform || 'twitch';
+    document.getElementById('profile-stream-channel').value = authUser.stream_channel || '';
 
     // Clear messages
     document.querySelectorAll('.profile-msg').forEach(el => { el.textContent = ''; el.className = 'profile-msg'; });
@@ -1745,6 +1943,100 @@ async function saveProfilePassword() {
         msgEl.textContent = 'Error de conexión';
         msgEl.className = 'profile-msg error';
     }
+}
+
+async function saveProfileStream() {
+    const msgEl = document.getElementById('profile-stream-msg');
+    const platform = document.getElementById('profile-stream-platform').value;
+    const channel = document.getElementById('profile-stream-channel').value.trim();
+    msgEl.textContent = 'Guardando...';
+    msgEl.className = 'profile-msg';
+
+    if (!platform || !channel) {
+        msgEl.textContent = 'Ambos campos son obligatorios';
+        msgEl.className = 'profile-msg error';
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/stream', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ platform, channel })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            msgEl.textContent = data.error || 'Error';
+            msgEl.className = 'profile-msg error';
+            return;
+        }
+
+        authUser.stream_platform = platform;
+        authUser.stream_channel = channel;
+        localStorage.setItem('streamPlatform', platform);
+        localStorage.setItem('streamChannel', channel);
+        msgEl.textContent = '✅ Información de directo actualizada';
+        msgEl.className = 'profile-msg success';
+        try { loadTrainers(); } catch(e) {}
+    } catch (err) {
+        msgEl.textContent = 'Error de conexión';
+        msgEl.className = 'profile-msg error';
+    }
+}
+
+function renderStreams() {
+    const section = document.getElementById('streams-section');
+    const grid = document.getElementById('streams-grid');
+    const countEl = document.getElementById('streams-count');
+    if (!section || !grid) return;
+
+    const liveUsers = allUsers.filter(u => u.is_live);
+
+    if (liveUsers.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    if (countEl) {
+        countEl.textContent = `${liveUsers.length} en directo`;
+    }
+
+    grid.innerHTML = '';
+    liveUsers.forEach(user => {
+        const initial = user.username.charAt(0).toUpperCase();
+        
+        let link = '#';
+        const plat = (user.stream_platform || 'twitch').toLowerCase();
+        const chan = user.stream_channel;
+        if (plat === 'twitch') link = `https://twitch.tv/${chan}`;
+        else if (plat === 'youtube') link = `https://youtube.com/@${chan}/live`;
+        else if (plat === 'kick') link = `https://kick.com/${chan}`;
+
+        const card = document.createElement('a');
+        card.href = link;
+        card.target = '_blank';
+        card.className = 'stream-card';
+
+        const avatarHtml = renderAvatarCircle('match-avatar', initial, user.avatar_url);
+
+        card.innerHTML = `
+            ${avatarHtml}
+            <div class="stream-info">
+                <div class="stream-username">${escapeHtml(user.username)}</div>
+                <div class="stream-channel">${escapeHtml(user.stream_channel)}</div>
+                <div class="stream-live-label">
+                    <span class="stream-live-dot"></span>
+                    <span>EN DIRECTO</span>
+                </div>
+            </div>
+            <span class="stream-platform-badge ${plat}">${plat}</span>
+        `;
+        grid.appendChild(card);
+    });
 }
 
 // ===================== BATTLES TAB =====================

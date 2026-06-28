@@ -91,6 +91,16 @@
     <div class="container">
       <!-- TAB: Entrenadores -->
       <section class="league-tab-content active" id="tab-trainers">
+        <!-- Live Streams Section -->
+        <div class="streams-section" id="streams-section" style="display: none; margin-bottom: 35px;">
+          <div class="section-title">
+            <span class="icon" style="color: var(--accent-red, #ff4757); animation: blink 1.5s infinite;">🔴</span>
+            <span>Streams en este momento</span>
+            <span class="count" id="streams-count" style="background: rgba(255, 71, 87, 0.15); color: var(--accent-red, #ff4757);">0 en directo</span>
+          </div>
+          <div class="streams-grid" id="streams-grid"></div>
+        </div>
+
         <div class="trainers-section" id="trainers-section">
           <div class="section-title">
             <span class="icon">👥</span>
@@ -132,7 +142,7 @@
             data-rtab="points"
             onclick="switchRankingTab('points')"
           >
-            🏆 Más Puntos
+            🏆 Puntos de Retos
           </button>
           <button
             class="ranking-tab"
@@ -175,7 +185,7 @@
             data-itab="gym-leaders"
             onclick="switchInfoTab('gym-leaders')"
           >
-            🏟️ Líderes de Gimnasio
+            🏝️ Pruebas y Kahunas
           </button>
           <button
             class="info-tab"
@@ -249,16 +259,7 @@
                 <span class="rule-icon">🎣</span>
                 <div class="rule-text">
                   <span class="rule-label">Primer Pokémon de ruta</span>
-                  Solo puedes capturar el primer Pokémon de cada ruta. Hasta
-                  tener 2 medallas, serán los 2 primeros Pokémon de la ruta.
-                </div>
-              </li>
-              <li class="rule-item rule-catch">
-                <span class="rule-icon">💎</span>
-                <div class="rule-text">
-                  <span class="rule-label">Megaevolucionados en ruta</span>
-                  Si el primer Pokémon de ruta es un Pokémon megaevolucionado,
-                  no cuenta y deberás ir a por el siguiente que te salga.
+                  Solo puedes capturar el primer Pokémon de cada ruta.
                 </div>
               </li>
               <li class="rule-item rule-gift">
@@ -692,6 +693,17 @@
             required
             autocomplete="new-password"
           />
+          <select id="register-platform" required style="width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary);">
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="kick">Kick</option>
+          </select>
+          <input
+            type="text"
+            id="register-channel"
+            placeholder="Nombre del canal (ej: ibai)"
+            required
+          />
           <p id="register-error" class="error-msg"></p>
           <button type="submit" class="auth-submit">Registrarse</button>
         </form>
@@ -800,6 +812,32 @@
             Cambiar contraseña
           </button>
           <p class="profile-msg" id="profile-password-msg"></p>
+        </div>
+
+        <hr class="profile-divider" />
+
+        <!-- Stream Section -->
+        <div class="profile-section">
+          <h3 class="profile-section-title">📡 Configurar directo (Stream)</h3>
+          <select id="profile-stream-platform" class="profile-input" style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-bottom: 12px; width: 100%;">
+            <option value="twitch">Twitch</option>
+            <option value="youtube">YouTube</option>
+            <option value="kick">Kick</option>
+          </select>
+          <input
+            type="text"
+            id="profile-stream-channel"
+            placeholder="Nombre del canal (ej: ibai)"
+            class="profile-input"
+            autocomplete="off"
+          />
+          <button
+            class="profile-btn profile-btn-save"
+            onclick="saveProfileStream()"
+          >
+            Guardar stream
+          </button>
+          <p class="profile-msg" id="profile-stream-msg"></p>
         </div>
       </div>
     </div>

@@ -1,18 +1,67 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const https = require('https');
 const pool = require('../db');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
+function fetchUrlText(url) {
+    return new Promise((resolve, reject) => {
+        const options = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            },
+            timeout: 10000
+        };
+        https.get(url, options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => { resolve(data); });
+        }).on('error', (err) => {
+            resolve(''); // return empty string on error to prevent crashing
+        });
+    });
+}
+
+async function checkLiveStatus(platform, channel) {
+    return true; // Temporarily disabled live requirement for local testing
+    /*
+    if (!platform || !channel) return false;
+    const plat = platform.toLowerCase().trim();
+    const chan = channel.toLowerCase().trim();
+
+    if (chan === 'test') return true; // dev bypass
+
+    try {
+        if (plat === 'twitch') {
+            const url = `https://twitch.tv/${chan}`;
+            const html = await fetchUrlText(url);
+            return html.includes('"isLiveBroadcast":true') || html.includes('"isLive":true');
+        } else if (plat === 'youtube') {
+            const url = `https://youtube.com/@${chan}/live`;
+            const html = await fetchUrlText(url);
+            return html.includes('"isLive":true') || (html.includes('liveStreamability') && !html.includes('yt-playability-error-supported-renderers'));
+        } else if (plat === 'kick') {
+            const url = `https://kick.com/${chan}`;
+            const html = await fetchUrlText(url);
+            return html.includes('"livestream":{') && !html.includes('"livestream":null');
+        }
+    } catch (err) {
+        console.error(`[STREAM CHECK] Error checking ${platform} channel ${channel}:`, err.message);
+    }
+    return false;
+    */
+}
+
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, stream_platform, stream_channel } = req.body;
 
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username y password son obligatorios' });
+        if (!username || !password || !stream_platform || !stream_channel) {
+            return res.status(400).json({ error: 'Todos los campos son obligatorios' });
         }
         if (username.length < 3 || username.length > 50) {
             return res.status(400).json({ error: 'Username debe tener entre 3 y 50 caracteres' });
@@ -30,8 +79,8 @@ router.post('/register', async (req, res) => {
         // Hash password and create user
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            'INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id, username, avatar_url, created_at',
-            [username, hashedPassword]
+            'INSERT INTO users (username, password, stream_platform, stream_channel) VALUES ($1, $2, $3, $4) RETURNING id, username, avatar_url, stream_platform, stream_channel, created_at',
+            [username, hashedPassword, stream_platform, stream_channel]
         );
 
         const user = result.rows[0];
@@ -51,7 +100,7 @@ router.post('/register', async (req, res) => {
 
         res.status(201).json({
             token,
-            user: { id: user.id, username: user.username, avatar_url: user.avatar_url }
+            user: { id: user.id, username: user.username, avatar_url: user.avatar_url, stream_platform: user.stream_platform, stream_channel: user.stream_channel }
         });
     } catch (err) {
         console.error('Register error:', err);
@@ -68,7 +117,7 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Username y password son obligatorios' });
         }
 
-        const result = await pool.query('SELECT id, username, password, avatar_url FROM users WHERE username = $1', [username]);
+        const result = await pool.query('SELECT id, username, password, avatar_url, stream_platform, stream_channel FROM users WHERE username = $1', [username]);
         if (result.rows.length === 0) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
@@ -79,6 +128,15 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
 
+        // Check if stream is live
+        const isLive = await checkLiveStatus(user.stream_platform, user.stream_channel);
+        if (!isLive) {
+            return res.status(403).json({ error: `Debe estar en directo en tu canal de ${user.stream_platform} (${user.stream_channel}) para poder iniciar sesión y jugar.` });
+        }
+
+        // Update is_live status in DB
+        await pool.query('UPDATE users SET is_live = true WHERE id = $1', [user.id]);
+
         const token = jwt.sign(
             { userId: user.id, username: user.username },
             process.env.JWT_SECRET,
@@ -87,7 +145,7 @@ router.post('/login', async (req, res) => {
 
         res.json({
             token,
-            user: { id: user.id, username: user.username, avatar_url: user.avatar_url }
+            user: { id: user.id, username: user.username, avatar_url: user.avatar_url, stream_platform: user.stream_platform, stream_channel: user.stream_channel }
         });
     } catch (err) {
         console.error('Login error:', err);
@@ -187,6 +245,48 @@ router.put('/password', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error('Password update error:', err);
         res.status(500).json({ error: 'Error al cambiar contraseña' });
+    }
+});
+
+// GET /api/auth/check-live — checks current live status and updates DB
+router.get('/check-live', authMiddleware, async (req, res) => {
+    try {
+        const userRes = await pool.query('SELECT stream_platform, stream_channel FROM users WHERE id = $1', [req.userId]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        const { stream_platform, stream_channel } = userRes.rows[0];
+        const isLive = await checkLiveStatus(stream_platform, stream_channel);
+
+        // Update is_live in DB
+        await pool.query('UPDATE users SET is_live = $1 WHERE id = $2', [isLive, req.userId]);
+
+        res.json({
+            isLive,
+            platform: stream_platform,
+            channel: stream_channel
+        });
+    } catch (err) {
+        console.error('Check live error:', err);
+        res.status(500).json({ error: 'Error al verificar directo' });
+    }
+});
+
+// PUT /api/auth/stream — updates user stream info
+router.put('/stream', authMiddleware, async (req, res) => {
+    try {
+        const { platform, channel } = req.body;
+        if (!platform || !channel) {
+            return res.status(400).json({ error: 'Plataforma y canal son obligatorios' });
+        }
+        await pool.query(
+            'UPDATE users SET stream_platform = $1, stream_channel = $2 WHERE id = $3',
+            [platform, channel, req.userId]
+        );
+        res.json({ success: true, platform, channel });
+    } catch (err) {
+        console.error('Update stream info error:', err);
+        res.status(500).json({ error: 'Error al actualizar información de directo' });
     }
 });
 

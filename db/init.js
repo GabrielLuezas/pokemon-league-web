@@ -18,6 +18,17 @@ async function initDB() {
             ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT NULL;
         `);
 
+        // Add stream columns if they don't exist
+        await client.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_platform VARCHAR(50) DEFAULT NULL;
+        `);
+        await client.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS stream_channel VARCHAR(100) DEFAULT NULL;
+        `);
+        await client.query(`
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS is_live BOOLEAN DEFAULT FALSE;
+        `);
+
         await client.query(`
             CREATE TABLE IF NOT EXISTS save_data (
                 id SERIAL PRIMARY KEY,

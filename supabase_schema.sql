@@ -5,11 +5,14 @@
 
 -- 1. USERS
 CREATE TABLE IF NOT EXISTS public.users (
-    id       SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    avatar_url TEXT DEFAULT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    id              SERIAL PRIMARY KEY,
+    username        VARCHAR(50) UNIQUE NOT NULL,
+    password        VARCHAR(255) NOT NULL,
+    avatar_url      TEXT DEFAULT NULL,
+    stream_platform VARCHAR(50) DEFAULT NULL,
+    stream_channel  VARCHAR(100) DEFAULT NULL,
+    is_live         BOOLEAN DEFAULT FALSE,
+    created_at      TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- 2. SAVE_DATA
