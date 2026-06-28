@@ -89,7 +89,11 @@
       five_pokemon: '#ff9f43', steal_pokemon: '#ff4757', no_special: '#8c7ae6',
       no_physical: '#8c7ae6', no_status: '#8c7ae6', no_supereffective: '#ff9f43',
       choice_band: '#ff9f43', gender_lock: '#8c7ae6', steal_card: '#ff9f43',
-      nerf_pokemon: '#ff4757', kill_pokemon: '#ff4757'
+      nerf_pokemon: '#ff4757', kill_pokemon: '#ff4757',
+      // Positive/Utility
+      revive: '#2ecc71', pokedolares: '#f1c40f', points: '#2ecc71',
+      shield: '#3498db', reflect: '#9b59b6', gacha: '#e67e22',
+      default: '#8c7ae6'
     };
 
     function playAlertSound(isSevere) {
@@ -100,7 +104,16 @@
     }
 
     function showCurse(curse) {
-      const color = CURSE_COLORS[curse.curseType] || '#8c7ae6';
+      // Resolve card colors/glow
+      let colorType = curse.curseType || 'default';
+      if (curse.cardId === 'c_revive') colorType = 'revive';
+      if (curse.cardId === 'c_pokedolares') colorType = 'pokedolares';
+      if (curse.cardId?.includes('pts')) colorType = 'points';
+      if (curse.cardId === 'c_escudo') colorType = 'shield';
+      if (curse.cardId === 'c_rebote') colorType = 'reflect';
+      if (curse.cardId?.includes('gacha')) colorType = 'gacha';
+
+      const color = CURSE_COLORS[colorType] || CURSE_COLORS[curse.curseType] || CURSE_COLORS.default;
       const severe = ['steal_pokemon','kill_pokemon','nerf_pokemon'].includes(curse.curseType);
       
       // Play sound
