@@ -1505,7 +1505,7 @@ const GYM_LEADERS = [
 const ELITE_FOUR = [
     {
         num: 'E4',
-        name: 'Molayne / Olivia / Zarala / Kahili',
+        name: 'Lario / Mayla / Zarala / Kahili',
         gym: 'Alto Mando Alola',
         icon: '⚔️',
         level: 68,
