@@ -1675,6 +1675,10 @@ function renderGymLeaders() {
             } else if (title.includes('Unidad Ultra')) {
                 if (item.name.toLowerCase().includes('darius')) {
                     badgeUrl = '/badges/Darius.png';
+                } else if (item.name.toLowerCase().includes('nihilego')) {
+                    badgeUrl = '/badges/Nihilego.png';
+                } else if (item.name.toLowerCase().includes('necrozma')) {
+                    badgeUrl = '/badges/Ultra_Necrozma.png';
                 }
             }
 
