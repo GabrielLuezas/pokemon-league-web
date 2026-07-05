@@ -1813,7 +1813,7 @@ function renderPokemonList() {
     container.innerHTML = html;
 }
 
-const EVOLUTION_MODS_ALWAYS = [
+const EVOLUTION_MODS = [
     { fromId: 61, fromName: 'Poliwhirl', toId: 186, toName: 'Politoed', oldMethod: 'Intercambio con Roca del Rey', newMethod: 'Subir nivel con Roca del Rey' },
     { fromId: 64, fromName: 'Kadabra', toId: 65, toName: 'Alakazam', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
     { fromId: 75, fromName: 'Graveler', toId: 76, toName: 'Golem', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
@@ -1840,10 +1840,7 @@ const EVOLUTION_MODS_ALWAYS = [
     { fromId: 684, fromName: 'Swirlix', toId: 685, toName: 'Slurpuff', oldMethod: 'Intercambio con Dulce de Nata', newMethod: 'Subir nivel con Dulce de Nata' },
     { fromId: 708, fromName: 'Phantump', toId: 709, toName: 'Trevenant', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
     { fromId: 710, fromName: 'Pumpkaboo', toId: 711, toName: 'Gourgeist', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
-    { fromId: 10100, fromName: 'Graveler Alola', toId: 10101, toName: 'Golem Alola', oldMethod: 'Intercambio', newMethod: 'Nivel 37' }
-];
-
-const EVOLUTION_MODS_RANDOMIZED = [
+    { fromId: 10100, fromName: 'Graveler Alola', toId: 10101, toName: 'Golem Alola', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
     { fromId: 108, fromName: 'Lickitung', toId: 463, toName: 'Lickilicky', oldMethod: 'Subir nivel con Desenrollar aprendido', newMethod: 'Nivel 33' },
     { fromId: 114, fromName: 'Tangela', toId: 465, toName: 'Tangrowth', oldMethod: 'Subir nivel con Poder Pasado aprendido', newMethod: 'Nivel 38' },
     { fromId: 190, fromName: 'Aipom', toId: 424, toName: 'Ambipom', oldMethod: 'Subir nivel con Doble Golpe aprendido', newMethod: 'Nivel 32' },
@@ -1853,60 +1850,48 @@ const EVOLUTION_MODS_RANDOMIZED = [
     { fromId: 439, fromName: 'Mime Jr.', toId: 122, toName: 'Mr. Mime', oldMethod: 'Subir nivel con Copión aprendido', newMethod: 'Nivel 15' },
     { fromId: 762, fromName: 'Steenee', toId: 763, toName: 'Tsareena', oldMethod: 'Subir nivel con Pisotón aprendido', newMethod: 'Nivel 29' },
     { fromId: 803, fromName: 'Poipole', toId: 804, toName: 'Naganadel', oldMethod: 'Subir nivel con Pulso Dragón aprendido', newMethod: 'Nivel 45' }
-];
+].sort((a, b) => a.fromName.localeCompare(b.fromName));
 
 function renderEvolutions() {
     const container = document.getElementById('evolutions-content');
     if (!container) return;
 
-    function buildEvoGrid(title, items) {
-        let html = `
-            <div class="evo-section" style="margin-top: 30px;">
-                <h3 class="evo-section-title" style="font-size: 1.25rem; font-weight: 700; color: var(--accent, #7c3aed); border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 20px;">
-                    ${title}
-                </h3>
-                <div class="evo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
-        `;
+    let html = `
+        <div class="evo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; margin-top: 10px;">
+    `;
 
-        items.forEach(item => {
-            const fromImg = `/pokemon-art/${item.fromId}.png`;
-            const toImg = `/pokemon-art/${item.toId}.png`;
-            html += `
-                <div class="evo-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card, rgba(12, 43, 56, 0.85)); border: 1px solid var(--border-color, rgba(0, 210, 255, 0.25)); border-radius: 12px; padding: 12px 16px; backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s ease;">
-                    
-                    <!-- Pre-evo -->
-                    <div class="evo-poke-box" style="display: flex; flex-direction: column; align-items: center; width: 85px; text-align: center;">
-                        <img src="${fromImg}" alt="${escapeHtml(item.fromName)}" width="68" height="68" style="object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.fromId}.png'" />
-                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(item.fromName)}</span>
-                    </div>
-
-                    <!-- Arrow + Method -->
-                    <div class="evo-method-box" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; text-align: center;">
-                        <span style="font-size: 1.4rem; line-height: 1; margin-bottom: 2px;">➡️</span>
-                        <span style="font-size: 0.85rem; font-weight: 800; color: #ffd166; line-height: 1.2;">${escapeHtml(item.newMethod)}</span>
-                        <span style="font-size: 0.68rem; color: var(--text-muted); text-decoration: line-through; margin-top: 3px; line-height: 1.1;">Original: ${escapeHtml(item.oldMethod)}</span>
-                    </div>
-
-                    <!-- Post-evo -->
-                    <div class="evo-poke-box" style="display: flex; flex-direction: column; align-items: center; width: 85px; text-align: center;">
-                        <img src="${toImg}" alt="${escapeHtml(item.toName)}" width="68" height="68" style="object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.toId}.png'" />
-                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(item.toName)}</span>
-                    </div>
-
-                </div>
-            `;
-        });
-
+    EVOLUTION_MODS.forEach(item => {
+        const fromImg = `/pokemon-art/${item.fromId}.png`;
+        const toImg = `/pokemon-art/${item.toId}.png`;
         html += `
+            <div class="evo-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card, rgba(12, 43, 56, 0.85)); border: 1px solid var(--border-color, rgba(0, 210, 255, 0.25)); border-radius: 12px; padding: 12px 16px; backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s ease;">
+                
+                <!-- Pre-evo -->
+                <div class="evo-poke-box" style="display: flex; flex-direction: column; align-items: center; width: 85px; text-align: center;">
+                    <img src="${fromImg}" alt="${escapeHtml(item.fromName)}" width="68" height="68" style="object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.fromId}.png'" />
+                    <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(item.fromName)}</span>
                 </div>
+
+                <!-- Arrow + Method -->
+                <div class="evo-method-box" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; text-align: center;">
+                    <span style="font-size: 1.4rem; line-height: 1; margin-bottom: 2px;">➡️</span>
+                    <span style="font-size: 0.85rem; font-weight: 800; color: #ffd166; line-height: 1.2;">${escapeHtml(item.newMethod)}</span>
+                    <span style="font-size: 0.68rem; color: var(--text-muted); text-decoration: line-through; margin-top: 3px; line-height: 1.1;">Original: ${escapeHtml(item.oldMethod)}</span>
+                </div>
+
+                <!-- Post-evo -->
+                <div class="evo-poke-box" style="display: flex; flex-direction: column; align-items: center; width: 85px; text-align: center;">
+                    <img src="${toImg}" alt="${escapeHtml(item.toName)}" width="68" height="68" style="object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.toId}.png'" />
+                    <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(item.toName)}</span>
+                </div>
+
             </div>
         `;
-        return html;
-    }
+    });
 
-    let html = '';
-    html += buildEvoGrid('Siempre Activas', EVOLUTION_MODS_ALWAYS);
-    html += buildEvoGrid('Solo si los movimientos están randomizados', EVOLUTION_MODS_RANDOMIZED);
+    html += `
+        </div>
+    `;
 
     container.innerHTML = html;
 }
