@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadTrainers();
     renderGymLeaders();
     renderPokemonList();
+    renderEvolutions();
     loadTournament();
 
     // Auto-refresh every 15 seconds
@@ -1808,6 +1809,104 @@ function renderPokemonList() {
             'allowed'
         );
     }
+
+    container.innerHTML = html;
+}
+
+const EVOLUTION_MODS_ALWAYS = [
+    { fromId: 61, fromName: 'Poliwhirl', toId: 186, toName: 'Politoed', oldMethod: 'Intercambio con Roca del Rey', newMethod: 'Subir nivel con Roca del Rey' },
+    { fromId: 64, fromName: 'Kadabra', toId: 65, toName: 'Alakazam', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 75, fromName: 'Graveler', toId: 76, toName: 'Golem', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 67, fromName: 'Machoke', toId: 68, toName: 'Machamp', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 79, fromName: 'Slowpoke', toId: 199, toName: 'Slowking', oldMethod: 'Intercambio con Roca del Rey', newMethod: 'Piedra Agua' },
+    { fromId: 93, fromName: 'Haunter', toId: 94, toName: 'Gengar', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 95, fromName: 'Onix', toId: 208, toName: 'Steelix', oldMethod: 'Intercambio con Revestimiento Metálico', newMethod: 'Subir nivel con Revestimiento Metálico' },
+    { fromId: 112, fromName: 'Rhydon', toId: 464, toName: 'Rhyperior', oldMethod: 'Intercambio con Protector', newMethod: 'Subir nivel con Protector' },
+    { fromId: 117, fromName: 'Seadra', toId: 230, toName: 'Kingdra', oldMethod: 'Intercambio con Escama Dragón', newMethod: 'Subir nivel con Escama Dragón' },
+    { fromId: 123, fromName: 'Scyther', toId: 212, toName: 'Scizor', oldMethod: 'Intercambio con Revestimiento Metálico', newMethod: 'Subir nivel con Revestimiento Metálico' },
+    { fromId: 125, fromName: 'Electabuzz', toId: 466, toName: 'Electivire', oldMethod: 'Intercambio con Electrizador', newMethod: 'Subir nivel con Electrizador' },
+    { fromId: 126, fromName: 'Magmar', toId: 467, toName: 'Magmortar', oldMethod: 'Intercambio con Magmatizador', newMethod: 'Subir nivel con Magmatizador' },
+    { fromId: 137, fromName: 'Porygon', toId: 233, toName: 'Porygon2', oldMethod: 'Intercambio con Mejora', newMethod: 'Subir nivel con Mejora' },
+    { fromId: 233, fromName: 'Porygon2', toId: 474, toName: 'Porygon-Z', oldMethod: 'Intercambio con Disco Extraño', newMethod: 'Subir nivel con Disco Extraño' },
+    { fromId: 349, fromName: 'Feebas', toId: 350, toName: 'Milotic', oldMethod: 'Intercambio con Escama Bella', newMethod: 'Subir nivel con Escama Bella' },
+    { fromId: 356, fromName: 'Dusclops', toId: 477, toName: 'Dusknoir', oldMethod: 'Intercambio con Tela Terrible', newMethod: 'Subir nivel con Tela Terrible' },
+    { fromId: 366, fromName: 'Clamperl', toId: 367, toName: 'Huntail', oldMethod: 'Intercambio con Diente Marino', newMethod: 'Subir nivel con Diente Marino' },
+    { fromId: 366, fromName: 'Clamperl', toId: 368, toName: 'Gorebyss', oldMethod: 'Intercambio con Escama Marina', newMethod: 'Subir nivel con Escama Marina' },
+    { fromId: 525, fromName: 'Boldore', toId: 526, toName: 'Gigalith', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 533, fromName: 'Gurdurr', toId: 534, toName: 'Conkeldurr', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 588, fromName: 'Karrablast', toId: 589, toName: 'Escavalier', oldMethod: 'Intercambio por Shelmet', newMethod: 'Subir nivel con Shelmet en el equipo' },
+    { fromId: 616, fromName: 'Shelmet', toId: 617, toName: 'Accelgor', oldMethod: 'Intercambio por Karrablast', newMethod: 'Subir nivel con Karrablast en el equipo' },
+    { fromId: 682, fromName: 'Spritzee', toId: 683, toName: 'Aromatisse', oldMethod: 'Intercambio con Saquito Aromático', newMethod: 'Subir nivel con Saquito Aromático' },
+    { fromId: 684, fromName: 'Swirlix', toId: 685, toName: 'Slurpuff', oldMethod: 'Intercambio con Dulce de Nata', newMethod: 'Subir nivel con Dulce de Nata' },
+    { fromId: 708, fromName: 'Phantump', toId: 709, toName: 'Trevenant', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 710, fromName: 'Pumpkaboo', toId: 711, toName: 'Gourgeist', oldMethod: 'Intercambio', newMethod: 'Nivel 37' },
+    { fromId: 10100, fromName: 'Graveler Alola', toId: 10101, toName: 'Golem Alola', oldMethod: 'Intercambio', newMethod: 'Nivel 37' }
+];
+
+const EVOLUTION_MODS_RANDOMIZED = [
+    { fromId: 108, fromName: 'Lickitung', toId: 463, toName: 'Lickilicky', oldMethod: 'Subir nivel con Desenrollar aprendido', newMethod: 'Nivel 33' },
+    { fromId: 114, fromName: 'Tangela', toId: 465, toName: 'Tangrowth', oldMethod: 'Subir nivel con Poder Pasado aprendido', newMethod: 'Nivel 38' },
+    { fromId: 190, fromName: 'Aipom', toId: 424, toName: 'Ambipom', oldMethod: 'Subir nivel con Doble Golpe aprendido', newMethod: 'Nivel 32' },
+    { fromId: 193, fromName: 'Yanma', toId: 469, toName: 'Yanmega', oldMethod: 'Subir nivel con Poder Pasado aprendido', newMethod: 'Nivel 33' },
+    { fromId: 221, fromName: 'Piloswine', toId: 473, toName: 'Mamoswine', oldMethod: 'Subir nivel con Poder Pasado aprendido', newMethod: 'Nivel 45' },
+    { fromId: 438, fromName: 'Bonsly', toId: 185, toName: 'Sudowoodo', oldMethod: 'Subir nivel con Copión aprendido', newMethod: 'Nivel 15' },
+    { fromId: 439, fromName: 'Mime Jr.', toId: 122, toName: 'Mr. Mime', oldMethod: 'Subir nivel con Copión aprendido', newMethod: 'Nivel 15' },
+    { fromId: 762, fromName: 'Steenee', toId: 763, toName: 'Tsareena', oldMethod: 'Subir nivel con Pisotón aprendido', newMethod: 'Nivel 29' },
+    { fromId: 803, fromName: 'Poipole', toId: 804, toName: 'Naganadel', oldMethod: 'Subir nivel con Pulso Dragón aprendido', newMethod: 'Nivel 45' }
+];
+
+function renderEvolutions() {
+    const container = document.getElementById('evolutions-content');
+    if (!container) return;
+
+    function buildEvoGrid(title, items) {
+        let html = `
+            <div class="evo-section" style="margin-top: 30px;">
+                <h3 class="evo-section-title" style="font-size: 1.25rem; font-weight: 700; color: var(--accent, #7c3aed); border-bottom: 2px solid var(--border-color); padding-bottom: 8px; margin-bottom: 20px;">
+                    ${title}
+                </h3>
+                <div class="evo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px;">
+        `;
+
+        items.forEach(item => {
+            const fromImg = `/pokemon-art/${item.fromId}.png`;
+            const toImg = `/pokemon-art/${item.toId}.png`;
+            html += `
+                <div class="evo-card" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-card, rgba(12, 43, 56, 0.85)); border: 1px solid var(--border-color, rgba(0, 210, 255, 0.25)); border-radius: 12px; padding: 12px 16px; backdrop-filter: blur(12px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: transform 0.2s ease;">
+                    
+                    <!-- Pre-evo -->
+                    <div class="evo-poke-box" style="display: flex; flex-direction: column; align-items: center; width: 85px; text-align: center;">
+                        <img src="${fromImg}" alt="${escapeHtml(item.fromName)}" width="68" height="68" style="object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.fromId}.png'" />
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(item.fromName)}</span>
+                    </div>
+
+                    <!-- Arrow + Method -->
+                    <div class="evo-method-box" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 10px; text-align: center;">
+                        <span style="font-size: 1.4rem; line-height: 1; margin-bottom: 2px;">➡️</span>
+                        <span style="font-size: 0.85rem; font-weight: 800; color: #ffd166; line-height: 1.2;">${escapeHtml(item.newMethod)}</span>
+                        <span style="font-size: 0.68rem; color: var(--text-muted); text-decoration: line-through; margin-top: 3px; line-height: 1.1;">Original: ${escapeHtml(item.oldMethod)}</span>
+                    </div>
+
+                    <!-- Post-evo -->
+                    <div class="evo-poke-box" style="display: flex; flex-direction: column; align-items: center; width: 85px; text-align: center;">
+                        <img src="${toImg}" alt="${escapeHtml(item.toName)}" width="68" height="68" style="object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25));" onerror="this.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${item.toId}.png'" />
+                        <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(item.toName)}</span>
+                    </div>
+
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+        return html;
+    }
+
+    let html = '';
+    html += buildEvoGrid('Siempre Activas', EVOLUTION_MODS_ALWAYS);
+    html += buildEvoGrid('Solo si los movimientos están randomizados', EVOLUTION_MODS_RANDOMIZED);
 
     container.innerHTML = html;
 }

@@ -208,6 +208,13 @@
           >
             🏆 Prize Pool
           </button>
+          <button
+            class="info-tab"
+            data-itab="evolutions"
+            onclick="switchInfoTab('evolutions')"
+          >
+            🧬 Evoluciones
+          </button>
         </div>
 
         <!-- Líderes de Gimnasio Panel -->
@@ -459,6 +466,24 @@
                   derecho al premio.
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evoluciones Modificadas Panel -->
+        <div class="info-panel" id="ipanel-evolutions">
+          <div class="rules-container">
+            <div class="rules-title-row">
+              <span class="rules-title-icon">🧬</span>
+              <h2 class="rules-title">Evoluciones Modificadas</h2>
+            </div>
+            
+            <p style="color: var(--text-secondary); margin-bottom: 24px; line-height: 1.6; font-size: 0.95rem;">
+              Para facilitar la obtención de ciertas evoluciones en el Megalocke (especialmente aquellas por intercambio o movimientos específicos), se han ajustado los métodos de evolución de los siguientes Pokémon:
+            </p>
+            
+            <div id="evolutions-content">
+              <!-- Contenido generado dinámicamente desde app.js -->
             </div>
           </div>
         </div>
