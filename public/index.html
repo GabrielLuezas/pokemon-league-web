@@ -182,6 +182,13 @@
         <div class="info-tabs">
           <button
             class="info-tab active"
+            data-itab="rules"
+            onclick="switchInfoTab('rules')"
+          >
+            📜 Reglas
+          </button>
+          <button
+            class="info-tab"
             data-itab="gym-leaders"
             onclick="switchInfoTab('gym-leaders')"
           >
@@ -189,10 +196,10 @@
           </button>
           <button
             class="info-tab"
-            data-itab="rules"
-            onclick="switchInfoTab('rules')"
+            data-itab="evolutions"
+            onclick="switchInfoTab('evolutions')"
           >
-            📜 Reglas
+            🧬 Evoluciones
           </button>
           <button
             class="info-tab"
@@ -208,22 +215,15 @@
           >
             🏆 Prize Pool
           </button>
-          <button
-            class="info-tab"
-            data-itab="evolutions"
-            onclick="switchInfoTab('evolutions')"
-          >
-            🧬 Evoluciones
-          </button>
         </div>
 
         <!-- Líderes de Gimnasio Panel -->
-        <div class="info-panel active" id="ipanel-gym-leaders">
+        <div class="info-panel" id="ipanel-gym-leaders">
           <div id="gym-leaders-content"></div>
         </div>
 
         <!-- Reglas Panel -->
-        <div class="info-panel" id="ipanel-rules">
+        <div class="info-panel active" id="ipanel-rules">
           <div class="rules-container">
             <div class="rules-title-row">
               <span class="rules-title-icon">📜</span>

@@ -1474,7 +1474,7 @@ function buildRankingCategory(containerId, sorted, getValue, formatVal, loggedUs
 
 // ===================== INFO TAB =====================
 
-let activeInfoTab = 'gym-leaders';
+let activeInfoTab = 'rules';
 
 function switchInfoTab(tab) {
     activeInfoTab = tab;
@@ -1621,11 +1621,18 @@ function renderGymLeaders() {
 
     ELITE_FOUR.forEach(entry => {
         const cardClass = entry.isChampion ? 'gym-leader-card gym-champion-card' : 'gym-leader-card gym-elite-card';
+        let badgeUrl = '';
+        if (entry.name.toLowerCase().includes('hau') || entry.name.toLowerCase().includes('tilo')) {
+            badgeUrl = '/badges/hau.png';
+        }
+        const imgHtml = badgeUrl 
+            ? `<img src="${badgeUrl}" class="gym-leader-badge-img" style="filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.45));" />` 
+            : `<div class="gym-leader-no-badge">${entry.icon}</div>`;
         html += `
             <div class="${cardClass}">
                 <div class="gym-leader-num${entry.isChampion ? ' champion-num' : ' elite-num'}">${entry.isChampion ? '👑' : '⚔️'}</div>
                 <div class="gym-leader-badge-wrap">
-                    <div class="gym-leader-no-badge">${entry.icon}</div>
+                    ${imgHtml}
                 </div>
                 <div class="gym-leader-info">
                     <div class="gym-leader-name">${escapeHtml(entry.name)}</div>
@@ -1664,6 +1671,10 @@ function renderGymLeaders() {
                     badgeUrl = '/badges/hau.png';
                 } else {
                     badgeUrl = '/badges/gladion.png'; // default
+                }
+            } else if (title.includes('Unidad Ultra')) {
+                if (item.name.toLowerCase().includes('darius')) {
+                    badgeUrl = '/badges/Darius.png';
                 }
             }
 
