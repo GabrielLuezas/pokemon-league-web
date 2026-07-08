@@ -304,6 +304,7 @@ function renderTrainerDetail(user) {
         <div class="detail-tabs">
             <button class="detail-tab${activeDetailTab === 'actual' ? ' active' : ''}" data-tab="actual" onclick="switchDetailTab('actual')">🎖️ Actual</button>
             <button class="detail-tab${activeDetailTab === 'pokemon' ? ' active' : ''}" data-tab="pokemon" onclick="switchDetailTab('pokemon')">⚔️ Pokémon</button>
+            <button class="detail-tab${activeDetailTab === 'battle-team' ? ' active' : ''}" data-tab="battle-team" onclick="switchDetailTab('battle-team')">🛡️ Equipo de Combate</button>
         </div>
 
         <!-- Tab: Actual -->
@@ -347,6 +348,11 @@ function renderTrainerDetail(user) {
                 <div class="cards-grid" id="detail-cards-grid" style="display:flex; gap:12px; flex-wrap:wrap; margin-top:15px; justify-content: flex-start;"></div>
             </section>
         </div>
+
+        <!-- Tab: Equipo de Combate -->
+        <div class="tab-content" id="tab-battle-team" style="${activeDetailTab === 'battle-team' ? '' : 'display:none'}">
+            <div id="battle-team-content"></div>
+        </div>
     `;
 
     renderActualContent(user);
@@ -355,6 +361,7 @@ function renderTrainerDetail(user) {
     renderDetailBox(0, boxes);
     renderDetailGraveyard(nuzlocke);
     renderDetailCards(nuzlocke);
+    renderDetailBattleTeam(user, party, boxes, nuzlocke);
 }
 
 function switchDetailTab(tab) {
@@ -364,6 +371,9 @@ function switchDetailTab(tab) {
     });
     document.getElementById('tab-actual').style.display = tab === 'actual' ? 'block' : 'none';
     document.getElementById('tab-pokemon').style.display = tab === 'pokemon' ? 'block' : 'none';
+    document.getElementById('tab-tab-battle-team') ? document.getElementById('tab-tab-battle-team').style.display = tab === 'battle-team' ? 'block' : 'none' : null;
+    const btContent = document.getElementById('tab-battle-team');
+    if (btContent) btContent.style.display = tab === 'battle-team' ? 'block' : 'none';
 }
 
 /**
@@ -626,6 +636,225 @@ function renderStatCell(label, value, iv, ev) {
         </div>
     `;
 }
+
+// ===================== EQUIPO DE COMBATE =====================
+
+function renderDetailBattleTeam(user, party, boxes, nuzlocke) {
+    const container = document.getElementById('battle-team-content');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // Gather all alive Pokemon from party and boxes
+    const allAlive = [];
+    if (party) {
+        party.forEach(p => {
+            if (p && !p.isDead) allAlive.push(p);
+        });
+    }
+    if (boxes) {
+        boxes.forEach(box => {
+            if (box && box.slots) {
+                box.slots.forEach(p => {
+                    if (p && !p.isDead) allAlive.push(p);
+                });
+            }
+        });
+    }
+
+    const battleTeamECs = nuzlocke && Array.isArray(nuzlocke.battleTeam) ? nuzlocke.battleTeam : [];
+    const chosen = battleTeamECs.map(ec => allAlive.find(p => p.ec === ec)).filter(Boolean);
+
+    // Header section with copy button
+    const header = document.createElement('div');
+    header.className = 'section-title';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '20px';
+    header.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px;">
+            <span class="icon">🛡️</span>
+            <span>Equipo de Combate</span>
+            <span class="count">${chosen.length}/8</span>
+        </div>
+        ${chosen.length > 0 ? `<button class="copy-btn" id="web-battle-team-copy-btn" onclick="copyWebBattleTeamShowdown(${JSON.stringify(battleTeamECs).replace(/"/g, '&quot;')})">📋 Copiar Showdown</button>` : ''}
+    `;
+    container.appendChild(header);
+
+    // Chosen grid
+    const grid = document.createElement('div');
+    grid.className = 'party-grid';
+    grid.id = 'detail-battle-team-grid';
+    container.appendChild(grid);
+
+    if (chosen.length === 0) {
+        grid.innerHTML = '<div class="no-data-msg" style="grid-column:1/-1"><span class="icon">🛡️</span><p>El jugador no ha seleccionado ningún Pokémon para su equipo de combate o no se han sincronizado datos.</p></div>';
+        return;
+    }
+
+    chosen.forEach(poke => {
+        const card = document.createElement('div');
+        const classes = ['pokemon-card'];
+        if (poke.isShiny) classes.push('shiny');
+        if (poke.isDead) classes.push('dead');
+        card.className = classes.join(' ');
+
+        const hpPercent = poke.stats && poke.stats.maxHP > 0
+            ? Math.round((poke.stats.hp / poke.stats.maxHP) * 100)
+            : 100;
+        const hpClass = hpPercent > 50 ? 'hp-high' : hpPercent > 20 ? 'hp-mid' : 'hp-low';
+
+        card.innerHTML = `
+            <div class="card-header">
+                <div class="sprite-container">
+                    ${createSpriteImg(poke.speciesId, poke.isShiny, 68).outerHTML}
+                </div>
+                <div class="card-info">
+                    <div class="name-row">
+                        <span class="pokemon-name">${escapeHtml(poke.nickname)}</span>
+                        ${poke.gender !== '—' ? `<span class="gender ${poke.gender === '♂' ? 'male' : 'female'}">${poke.gender}</span>` : ''}
+                    </div>
+                    ${poke.nickname !== poke.species ? `<div class="species-name">${escapeHtml(poke.species)}</div>` : ''}
+                    <div class="level-badge">Lv. ${poke.level}</div>
+                </div>
+            </div>
+
+            ${poke.stats ? `
+            <div class="hp-bar-container">
+                <div class="hp-label">
+                    <span>HP</span>
+                    <span>${poke.stats.hp} / ${poke.stats.maxHP}</span>
+                </div>
+                <div class="hp-bar">
+                    <div class="hp-bar-fill ${hpClass}" style="width: ${hpPercent}%"></div>
+                </div>
+            </div>
+            ` : ''}
+
+            <div class="card-meta">
+                <div class="meta-item"><span class="label">Naturaleza:</span> ${poke.nature}</div>
+                <div class="meta-item"><span class="label">Habilidad:</span> ${escapeHtml(poke.ability)}</div>
+                ${poke.heldItem !== '—' ? `<div class="meta-item"><span class="label">Objeto:</span> ${escapeHtml(poke.heldItem)}</div>` : ''}
+            </div>
+
+            <div class="moves-grid">
+                ${(poke.moves || []).map(m => `<div class="move-tag">${escapeHtml(m.name)}</div>`).join('')}
+            </div>
+
+            <div class="stats-row">
+                ${renderStatCell('HP', poke.stats ? poke.stats.maxHP : '?', poke.ivs.hp, poke.evs.hp)}
+                ${renderStatCell('ATK', poke.stats ? poke.stats.atk : '?', poke.ivs.atk, poke.evs.atk)}
+                ${renderStatCell('DEF', poke.stats ? poke.stats.def : '?', poke.ivs.def, poke.evs.def)}
+                ${renderStatCell('SPA', poke.stats ? poke.stats.spa : '?', poke.ivs.spa, poke.evs.spa)}
+                ${renderStatCell('SPD', poke.stats ? poke.stats.spd : '?', poke.ivs.spd, poke.evs.spd)}
+                ${renderStatCell('SPE', poke.stats ? poke.stats.spe : '?', poke.ivs.spe, poke.evs.spe)}
+            </div>
+        `;
+
+        grid.appendChild(card);
+    });
+}
+
+function copyWebBattleTeamShowdown(battleTeamECs) {
+    if (!activeUserDetail) return;
+    const party = activeUserDetail.party || [];
+    const boxes = activeUserDetail.boxes || [];
+    
+    const allAlive = [];
+    party.forEach(p => { if (p && !p.isDead) allAlive.push(p); });
+    boxes.forEach(box => {
+        if (box && box.slots) {
+            box.slots.forEach(p => { if (p && !p.isDead) allAlive.push(p); });
+        }
+    });
+    
+    const chosen = battleTeamECs.map(ec => allAlive.find(p => p.ec === ec)).filter(Boolean);
+    if (chosen.length === 0) return;
+    
+    const text = chosen.map(p => toShowdown(p)).join('\n\n');
+    
+    // Copy using clipboard API
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById('web-battle-team-copy-btn');
+        if (btn) {
+            const old = btn.textContent;
+            btn.textContent = '📋 Copiado!';
+            setTimeout(() => { btn.textContent = old; }, 1500);
+        }
+    }).catch(err => {
+        console.error('Clipboard copy failed:', err);
+    });
+}
+
+// ===================== SHOWDOWN FORMAT =====================
+
+function toShowdown(poke) {
+    let lines = [];
+
+    // Line 1: Nickname (Species) @ Item  OR  Species @ Item
+    let line1 = '';
+    if (poke.nickname && poke.nickname !== poke.species) {
+        line1 = `${poke.nickname} (${poke.species})`;
+    } else {
+        line1 = poke.species;
+    }
+    // Gender
+    if (poke.gender === '♂') line1 += ' (M)';
+    else if (poke.gender === '♀') line1 += ' (F)';
+    // Item
+    if (poke.heldItem && poke.heldItem !== '—') {
+        line1 += ` @ ${poke.heldItem}`;
+    }
+    lines.push(line1);
+
+    // Ability
+    lines.push(`Ability: ${poke.ability}`);
+
+    // Level (only if not 100)
+    if (poke.level && poke.level !== 100) {
+        lines.push(`Level: ${poke.level}`);
+    }
+
+    // Shiny
+    if (poke.isShiny) {
+        lines.push('Shiny: Yes');
+    }
+
+    // EVs (only non-zero)
+    const evMap = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
+    const evParts = Object.entries(evMap)
+        .filter(([key]) => poke.evs[key] > 0)
+        .map(([key, label]) => `${poke.evs[key]} ${label}`);
+    if (evParts.length > 0) {
+        lines.push(`EVs: ${evParts.join(' / ')}`);
+    }
+
+    // Nature
+    if (poke.nature && poke.nature !== 'Unknown') {
+        lines.push(`${poke.nature} Nature`);
+    }
+
+    // IVs (only if not 31)
+    const ivMap = { hp: 'HP', atk: 'Atk', def: 'Def', spa: 'SpA', spd: 'SpD', spe: 'Spe' };
+    const ivParts = Object.entries(ivMap)
+        .filter(([key]) => poke.ivs[key] !== 31)
+        .map(([key, label]) => `${poke.ivs[key]} ${label}`);
+    if (ivParts.length > 0) {
+        lines.push(`IVs: ${ivParts.join(' / ')}`);
+    }
+
+    // Moves
+    if (poke.moves) {
+        poke.moves.forEach(m => {
+            if (m.name && m.name !== '—') {
+                lines.push(`- ${m.name}`);
+            }
+        });
+    }
+
+    return lines.join('\n');
+}
+
 
 // ===================== RENDER BOX =====================
 
