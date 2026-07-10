@@ -2852,6 +2852,8 @@ async function loadMyMatches() {
     }
 }
 
+let selectedBanEC = null;
+
 function renderCurrentMatch(match) {
     const container = document.getElementById('current-match-content');
     if (!container) return;
@@ -2865,37 +2867,197 @@ function renderCurrentMatch(match) {
     const isP1 = match.player1 && match.player1.id === userId;
     const opponent = isP1 ? match.player2 : match.player1;
     const opponentName = opponent ? escapeHtml(opponent.username) : 'BYE';
-
+    
     const bracketLabel = match.roundNumber ? `⚔️ Ronda ${match.roundNumber}` : '⚔️ Torneo';
+    const p1Name = escapeHtml(match.player1.username);
+    const p2Name = escapeHtml(match.player2.username);
 
-    let statusHtml = '';
-    const myReport = match.reports ? match.reports[userId] : null;
+    const scoreP1 = match.score ? (match.score.p1 || 0) : 0;
+    const scoreP2 = match.score ? (match.score.p2 || 0) : 0;
 
-    if (myReport && match.status === 'waiting_opponent') {
-        statusHtml = '<div class="my-match-status waiting">⏳ Has reportado tu resultado. Esperando a tu rival...</div>';
-    } else if (match.status === 'conflict') {
-        statusHtml = '<div class="my-match-status conflict">⚠️ Conflicto en los resultados. El admin decidirá el ganador.</div>';
+    let matchScoreHtml = `
+        <div class="match-score-header">
+            <span class="match-score-title">Marcador de la Serie (Bo3)</span>
+            <div class="match-score-display">
+                <span class="${scoreP1 > scoreP2 ? 'winner' : ''}">${p1Name} <strong>${scoreP1}</strong></span>
+                <span class="vs-divider">-</span>
+                <span class="${scoreP2 > scoreP1 ? 'winner' : ''}"><strong>${scoreP2}</strong> ${p2Name}</span>
+            </div>
+        </div>
+    `;
+
+    const games = match.games || [];
+    let activeGame = games.find(g => g.status !== 'completed' && g.status !== 'conflict');
+    if (!activeGame && games.length > 0) {
+        activeGame = games[games.length - 1];
     }
+    const gameNum = activeGame ? activeGame.gameNumber : 1;
+    const activeGameStatus = activeGame ? activeGame.status : 'banning';
 
-    let reportHtml = '';
+    const myReady = isP1 ? match.p1Ready : match.p2Ready;
+    const opponentReady = isP1 ? match.p2Ready : match.p1Ready;
 
-    if (!myReport && (match.status === 'pending' || match.status === 'waiting_opponent' || match.status === 'conflict')) {
-        reportHtml = `
-            <div class="report-form">
-                <h4>📋 Reportar resultado (Bo3)</h4>
-                <p class="report-hint">Selecciona el resultado de tu serie:</p>
-                <div class="score-buttons">
-                    <button class="score-btn win" onclick="reportResult('${match.id}', 2, 0)">🏆 Gané 2 - 0</button>
-                    <button class="score-btn win" onclick="reportResult('${match.id}', 2, 1)">🏆 Gané 2 - 1</button>
-                    <button class="score-btn lose" onclick="reportResult('${match.id}', 1, 2)">💀 Perdí 1 - 2</button>
-                    <button class="score-btn lose" onclick="reportResult('${match.id}', 0, 2)">💀 Perdí 0 - 2</button>
+    const myTeam = isP1 ? (match.player1.battleTeam || []) : (match.player2.battleTeam || []);
+    const opponentTeam = isP1 ? (match.player2.battleTeam || []) : (match.player1.battleTeam || []);
+
+    const myLockedECs = isP1 ? (match.p1LockedECs || []) : (match.p2LockedECs || []);
+    const opponentLockedECs = isP1 ? (match.p2LockedECs || []) : (match.p1LockedECs || []);
+
+    let flowHtml = '';
+
+    if (!match.p1Ready || !match.p2Ready) {
+        flowHtml = `
+            <div class="match-flow-section">
+                <h4 class="flow-title">🏁 Fase de Preparación — Game ${gameNum}</h4>
+                <p class="flow-desc">Ambos jugadores deben marcarse como listos para poder ver los equipos y proceder al baneo.</p>
+                <div class="ready-status-container">
+                    <div class="ready-badge ${myReady ? 'ready' : 'pending'}">
+                        ${myReady ? '✓ Tú: ¡Listo!' : '❌ Tú: Pendiente'}
+                    </div>
+                    <div class="ready-badge ${opponentReady ? 'ready' : 'pending'}">
+                        ${opponentReady ? `✓ ${opponentName}: ¡Listo!` : `❌ ${opponentName}: Pendiente`}
+                    </div>
+                </div>
+                ${!myReady ? `
+                    <button class="action-btn ready-btn" onclick="markReady('${match.id}')">⚡ Marcar como Listo</button>
+                ` : `
+                    <div class="waiting-message">⏳ Esperando a que el rival se marque como listo...</div>
+                `}
+            </div>
+        `;
+    }
+    else if (activeGameStatus === 'banning') {
+        const myBanEC = isP1 ? activeGame.p1BannedEC : activeGame.p2BannedEC;
+        
+        if (!myBanEC) {
+            flowHtml = `
+                <div class="match-flow-section">
+                    <h4 class="flow-title">🛡️ Fase de Baneo — Game ${gameNum}</h4>
+                    <p class="flow-desc">Elige un Pokémon del equipo de tu oponente para banearlo en este Game. Los Pokémon bloqueados por haber ganado partidas anteriores no se pueden seleccionar.</p>
+                    
+                    <div class="ban-selection-grid">
+            `;
+
+            opponentTeam.forEach(poke => {
+                const isLocked = opponentLockedECs.includes(poke.ec);
+                const isSelected = selectedBanEC === poke.ec;
+                
+                let cardClass = 'ban-card';
+                if (isLocked) cardClass += ' locked';
+                if (isSelected) cardClass += ' selected';
+                if (poke.isShiny) cardClass += ' shiny';
+
+                flowHtml += `
+                    <div class="${cardClass}" ${!isLocked ? `onclick="selectBanEC(${poke.ec})"` : ''}>
+                        ${isLocked ? '<div class="locked-banner">BLOQUEADO</div>' : ''}
+                        <div class="ban-card-header">
+                            ${createSpriteImg(poke.speciesId, poke.isShiny, 48).outerHTML}
+                            <div class="ban-card-info">
+                                <div class="ban-card-name">${escapeHtml(poke.nickname)}</div>
+                                <div class="ban-card-level">Lv. ${poke.level}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            flowHtml += `
+                    </div>
+                    
+                    <button class="action-btn ban-confirm-btn" id="confirm-ban-btn" ${!selectedBanEC ? 'disabled' : ''} onclick="submitBan('${match.id}', selectedBanEC)">
+                        🔨 Confirmar Ban del Rival
+                    </button>
+                </div>
+            `;
+        } else {
+            flowHtml = `
+                <div class="match-flow-section">
+                    <h4 class="flow-title">🛡️ Fase de Baneo — Game ${gameNum}</h4>
+                    <div class="waiting-message">
+                        ⏳ Ya has elegido tu ban. Esperando a que tu rival banee un Pokémon de tu equipo...
+                    </div>
+                </div>
+            `;
+        }
+    }
+    else if (activeGameStatus === 'playing') {
+        const myBannedEC = isP1 ? activeGame.p2BannedEC : activeGame.p1BannedEC;
+        const opponentBannedEC = isP1 ? activeGame.p1BannedEC : activeGame.p2BannedEC;
+
+        const myBannedPoke = myTeam.find(p => p.ec === myBannedEC);
+        const opponentBannedPoke = opponentTeam.find(p => p.ec === opponentBannedEC);
+
+        const myReport = isP1 ? activeGame.p1Report : activeGame.p2Report;
+        const opponentReport = isP1 ? activeGame.p2Report : activeGame.p1Report;
+
+        flowHtml = `
+            <div class="match-flow-section">
+                <h4 class="flow-title">⚔️ Fase de Combate — Game ${gameNum}</h4>
+                <p class="flow-desc">¡Hagan el combate usando las reglas acordadas! Estos son los Pokémon baneados para esta partida:</p>
+                
+                <div class="bans-display-container">
+                    <div class="ban-display-box ours">
+                        <span class="label">Tu Pokémon Baneado:</span>
+                        ${myBannedPoke ? `
+                            <div class="ban-display-card">
+                                ${createSpriteImg(myBannedPoke.speciesId, myBannedPoke.isShiny, 40).outerHTML}
+                                <span>${escapeHtml(myBannedPoke.nickname)} (Lv. ${myBannedPoke.level})</span>
+                            </div>
+                        ` : '<span class="none">Ninguno</span>'}
+                    </div>
+                    
+                    <div class="ban-display-box theirs">
+                        <span class="label">Pokémon Baneado del Rival:</span>
+                        ${opponentBannedPoke ? `
+                            <div class="ban-display-card">
+                                ${createSpriteImg(opponentBannedPoke.speciesId, opponentBannedPoke.isShiny, 40).outerHTML}
+                                <span>${escapeHtml(opponentBannedPoke.nickname)} (Lv. ${opponentBannedPoke.level})</span>
+                            </div>
+                        ` : '<span class="none">Ninguno</span>'}
+                    </div>
+                </div>
+
+                <div class="locked-round-info">
+                    <strong>🚫 Bloqueos de ronda acumulados:</strong>
+                    <div>Tú no puedes usar: ${myLockedECs.length > 0 ? myLockedECs.map(ec => {
+                        const p = myTeam.find(x => x.ec === ec);
+                        return p ? escapeHtml(p.nickname) : 'Desconocido';
+                    }).join(', ') : 'Ninguno'}</div>
+                    <div>El rival no puede usar: ${opponentLockedECs.length > 0 ? opponentLockedECs.map(ec => {
+                        const p = opponentTeam.find(x => x.ec === ec);
+                        return p ? escapeHtml(p.nickname) : 'Desconocido';
+                    }).join(', ') : 'Ninguno'}</div>
+                </div>
+
+                <hr style="border:0; border-top: 1px solid var(--border-color); margin: 24px 0;">
+
+                <div class="game-reporting-container">
+                    ${!myReport ? `
+                        <h5>📋 Reportar resultado de este Game:</h5>
+                        <div class="score-buttons" style="display: flex; gap: 12px; margin-top: 12px;">
+                            <button class="score-btn win" style="flex:1;" onclick="reportGame('${match.id}', 'win')">🏆 ¡Gané!</button>
+                            <button class="score-btn lose" style="flex:1;" onclick="reportGame('${match.id}', 'loss')">💀 Perdí</button>
+                        </div>
+                    ` : `
+                        <div class="my-report-sent">
+                            ✅ Has reportado: <strong>${myReport === 'win' ? 'Victoria 🏆' : 'Derrota 💀'}</strong>
+                            ${opponentReport ? '' : '<div style="font-size:0.85rem; color:var(--text-muted); margin-top:6px;">Esperando el reporte del rival...</div>'}
+                        </div>
+                    `}
                 </div>
             </div>
         `;
-    } else if (myReport) {
-        const myScore = isP1 ? myReport.p1 : myReport.p2;
-        const enScore = isP1 ? myReport.p2 : myReport.p1;
-        reportHtml = `<div class="my-report-sent">✅ Ya has reportado: <strong>${myScore} - ${enScore}</strong></div>`;
+    }
+    else if (activeGameStatus === 'conflict' || match.status === 'conflict') {
+        flowHtml = `
+            <div class="match-flow-section conflict">
+                <h4 class="flow-title">⚠️ Conflicto Detectado</h4>
+                <p>Ambos jugadores han reportado el mismo resultado (ambos ganaron o ambos perdieron). El combate se encuentra pausado.</p>
+                <div class="conflict-notice" style="background: rgba(255, 82, 82, 0.15); border: 1px solid rgba(255, 82, 82, 0.3); border-radius: 8px; padding: 12px; margin-top: 12px; color: #ff5252; font-weight: 600;">
+                    El administrador (<strong>GabrielLucifer22</strong>) debe intervenir para resolver el conflicto e ingresar el resultado correcto.
+                </div>
+            </div>
+        `;
     }
 
     container.innerHTML = `
@@ -2913,10 +3075,101 @@ function renderCurrentMatch(match) {
                     <span>${opponentName}</span>
                 </div>
             </div>
-            ${statusHtml}
-            ${reportHtml}
+            ${matchScoreHtml}
+            ${flowHtml}
         </div>
     `;
+}
+
+function selectBanEC(ec) {
+    selectedBanEC = ec;
+    const btn = document.getElementById('confirm-ban-btn');
+    if (btn) {
+        btn.disabled = false;
+    }
+    const cards = document.querySelectorAll('.ban-card');
+    cards.forEach(card => {
+        card.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+}
+
+async function markReady(matchId) {
+    if (!authToken) return;
+    try {
+        const res = await fetch('/api/tournament/ready', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ matchId })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error al marcar listo');
+            return;
+        }
+        selectedBanEC = null;
+        loadMyMatches();
+        loadTournament();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+async function submitBan(matchId, bannedEC) {
+    if (!authToken) return;
+    if (!bannedEC) {
+        alert('Por favor selecciona un Pokémon para banear');
+        return;
+    }
+    try {
+        const res = await fetch('/api/tournament/ban', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ matchId, bannedEC })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error al banear');
+            return;
+        }
+        selectedBanEC = null;
+        loadMyMatches();
+        loadTournament();
+    } catch (err) {
+        alert('Error de conexión');
+    }
+}
+
+async function reportGame(matchId, result) {
+    if (!authToken) return;
+    const label = result === 'win' ? 'victoria' : 'derrota';
+    if (!confirm(`¿Confirmar que reportas una ${label} en esta partida?`)) return;
+    try {
+        const res = await fetch('/api/tournament/report-game', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ matchId, result })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.error || 'Error al reportar');
+            return;
+        }
+        selectedBanEC = null;
+        loadMyMatches();
+        loadTournament();
+    } catch (err) {
+        alert('Error de conexión');
+    }
 }
 
 function renderPastMatches(matches) {

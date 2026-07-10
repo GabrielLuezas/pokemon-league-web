@@ -17,6 +17,66 @@ async function saveTournamentState(state) {
     await pool.query('UPDATE tournament SET state = $1, updated_at = NOW()', [JSON.stringify(state)]);
 }
 
+async function getPlayerBattleTeam(userId) {
+    const res = await pool.query('SELECT party, boxes, nuzlocke FROM save_data WHERE user_id = $1', [userId]);
+    if (res.rows.length === 0) return [];
+    
+    const { party, boxes, nuzlocke } = res.rows[0];
+    const allAlive = [];
+    if (party) {
+        party.forEach(p => { if (p && !p.isDead) allAlive.push(p); });
+    }
+    if (boxes) {
+        boxes.forEach(box => {
+            if (box && box.slots) {
+                box.slots.forEach(p => { if (p && !p.isDead) allAlive.push(p); });
+            }
+        });
+    }
+    
+    const battleTeamECs = nuzlocke && Array.isArray(nuzlocke.battleTeam) ? nuzlocke.battleTeam : [];
+    return battleTeamECs.map(ec => allAlive.find(p => p.ec === ec)).filter(Boolean);
+}
+
+function getLockedECsForGame(match, playerId, gameNumber) {
+    if (gameNumber <= 1) return [];
+    
+    const prevGameNumber = gameNumber - 1;
+    const prevGame = (match.games || []).find(g => g.gameNumber === prevGameNumber);
+    if (!prevGame || prevGame.status !== 'completed' || !prevGame.winnerId) return [];
+    
+    if (prevGame.winnerId !== playerId) return [];
+    
+    if (playerId === match.player1.id) {
+        return prevGame.p2BannedEC ? [prevGame.p2BannedEC] : [];
+    } else {
+        return prevGame.p1BannedEC ? [prevGame.p1BannedEC] : [];
+    }
+}
+
+async function enrichMatch(match) {
+    if (!match || match.isBye) return match;
+    
+    const p1Team = await getPlayerBattleTeam(match.player1.id);
+    const p2Team = await getPlayerBattleTeam(match.player2.id);
+    
+    match.player1.battleTeam = p1Team;
+    match.player2.battleTeam = p2Team;
+    
+    const games = match.games || [];
+    let activeGame = games.find(g => g.status !== 'completed' && g.status !== 'conflict');
+    if (!activeGame && games.length > 0) {
+        activeGame = games[games.length - 1];
+    }
+    
+    const activeGameNumber = activeGame ? activeGame.gameNumber : 1;
+    
+    match.p1LockedECs = getLockedECsForGame(match, match.player1.id, activeGameNumber);
+    match.p2LockedECs = getLockedECsForGame(match, match.player2.id, activeGameNumber);
+    
+    return match;
+}
+
 /**
  * Swiss pairing algorithm:
  * 1. Group active players by record (wins-losses key, e.g. "2-1")
@@ -148,6 +208,20 @@ function generateSwissPairings(state) {
                     player1: { id: group[i].id, username: group[i].username, avatar_url: group[i].avatar_url },
                     player2: { id: bestPartner.id, username: bestPartner.username, avatar_url: bestPartner.avatar_url },
                     status: 'pending',
+                    p1Ready: false,
+                    p2Ready: false,
+                    games: [
+                        {
+                            gameNumber: 1,
+                            status: 'banning',
+                            p1BannedEC: null,
+                            p2BannedEC: null,
+                            p1Report: null,
+                            p2Report: null,
+                            winnerId: null,
+                            loserId: null
+                        }
+                    ],
                     score: { p1: 0, p2: 0 },
                     winnerId: null,
                     loserId: null,
@@ -222,6 +296,10 @@ router.get('/my-matches', authMiddleware, async (req, res) => {
                 if (match.status === 'completed') past.push(entry);
                 else current = entry;
             }
+        }
+
+        if (current) {
+            current = await enrichMatch(current);
         }
 
         res.json({ current, past });
@@ -416,6 +494,12 @@ router.post('/admin/override', authMiddleware, async (req, res) => {
         match.loserId = p1Wins > p2Wins ? match.player2.id : match.player1.id;
         match.adminOverride = true;
 
+        if (match.games) {
+            match.games.forEach(g => {
+                g.status = 'completed';
+            });
+        }
+
         // Update player records
         const winner = state.players.find(p => p.id === match.winnerId);
         const loser = state.players.find(p => p.id === match.loserId);
@@ -524,6 +608,212 @@ router.post('/reset', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error('Reset error:', err);
         res.status(500).json({ error: 'Error reseteando torneo' });
+    }
+});
+
+
+// POST /ready — Player marks themselves ready
+router.post('/ready', authMiddleware, async (req, res) => {
+    try {
+        const { matchId } = req.body;
+        const userId = req.userId;
+
+        let state = await getTournamentState();
+        if (!state || state.status !== 'active')
+            return res.status(400).json({ error: 'No hay torneo activo' });
+
+        let match = null;
+        for (const round of state.rounds) {
+            const m = round.matches.find(x => x.id === matchId);
+            if (m) { match = m; break; }
+        }
+        if (!match) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
+        if (match.status === 'completed')
+            return res.status(400).json({ error: 'El enfrentamiento ya terminó' });
+
+        const isP1 = match.player1 && match.player1.id === userId;
+        const isP2 = match.player2 && match.player2.id === userId;
+        if (!isP1 && !isP2)
+            return res.status(403).json({ error: 'No eres parte de este enfrentamiento' });
+
+        if (isP1) match.p1Ready = true;
+        if (isP2) match.p2Ready = true;
+
+        if (match.p1Ready && match.p2Ready) {
+            match.status = 'ready';
+        }
+
+        await saveTournamentState(state);
+        res.json({ success: true, match: await enrichMatch(match) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al marcar listo' });
+    }
+});
+
+// POST /ban — Player selects a Pokémon to ban from the opponent's team
+router.post('/ban', authMiddleware, async (req, res) => {
+    try {
+        const { matchId, bannedEC } = req.body;
+        const userId = req.userId;
+
+        let state = await getTournamentState();
+        if (!state || state.status !== 'active')
+            return res.status(400).json({ error: 'No hay torneo activo' });
+
+        let match = null;
+        for (const round of state.rounds) {
+            const m = round.matches.find(x => x.id === matchId);
+            if (m) { match = m; break; }
+        }
+        if (!match) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
+        if (!match.p1Ready || !match.p2Ready)
+            return res.status(400).json({ error: 'Ambos jugadores deben estar listos' });
+
+        const isP1 = match.player1 && match.player1.id === userId;
+        const isP2 = match.player2 && match.player2.id === userId;
+        if (!isP1 && !isP2)
+            return res.status(403).json({ error: 'No eres parte de este enfrentamiento' });
+
+        if (!match.games) match.games = [];
+        let activeGame = match.games.find(g => g.status !== 'completed' && g.status !== 'conflict');
+        if (!activeGame) {
+            activeGame = {
+                gameNumber: match.games.length + 1,
+                status: 'banning',
+                p1BannedEC: null,
+                p2BannedEC: null,
+                p1Report: null,
+                p2Report: null,
+                winnerId: null,
+                loserId: null
+            };
+            match.games.push(activeGame);
+        }
+
+        if (activeGame.status !== 'banning')
+            return res.status(400).json({ error: 'No estás en fase de baneo' });
+
+        const opponentId = isP1 ? match.player2.id : match.player1.id;
+        const opponentTeam = await getPlayerBattleTeam(opponentId);
+        const exists = opponentTeam.some(p => p.ec === bannedEC);
+        if (!exists) return res.status(400).json({ error: 'El Pokémon no está en el equipo del rival' });
+
+        const opponentLocked = getLockedECsForGame(match, opponentId, activeGame.gameNumber);
+        if (opponentLocked.includes(bannedEC)) {
+            return res.status(400).json({ error: 'Ese Pokémon ya está bloqueado en esta ronda' });
+        }
+
+        if (isP1) {
+            activeGame.p1BannedEC = bannedEC;
+        } else {
+            activeGame.p2BannedEC = bannedEC;
+        }
+
+        if (activeGame.p1BannedEC && activeGame.p2BannedEC) {
+            activeGame.status = 'playing';
+            match.status = 'playing';
+        }
+
+        await saveTournamentState(state);
+        res.json({ success: true, match: await enrichMatch(match) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al banear' });
+    }
+});
+
+// POST /report-game — Player reports win or loss for the current game
+router.post('/report-game', authMiddleware, async (req, res) => {
+    try {
+        const { matchId, result } = req.body;
+        const userId = req.userId;
+
+        if (result !== 'win' && result !== 'loss')
+            return res.status(400).json({ error: 'Resultado inválido (debe ser win o loss)' });
+
+        let state = await getTournamentState();
+        if (!state || state.status !== 'active')
+            return res.status(400).json({ error: 'No hay torneo activo' });
+
+        let match = null;
+        for (const round of state.rounds) {
+            const m = round.matches.find(x => x.id === matchId);
+            if (m) { match = m; break; }
+        }
+        if (!match) return res.status(404).json({ error: 'Enfrentamiento no encontrado' });
+
+        const isP1 = match.player1 && match.player1.id === userId;
+        const isP2 = match.player2 && match.player2.id === userId;
+        if (!isP1 && !isP2)
+            return res.status(403).json({ error: 'No eres parte de este enfrentamiento' });
+
+        if (!match.games) return res.status(400).json({ error: 'No hay partidas iniciadas' });
+        let activeGame = match.games.find(g => g.status !== 'completed' && g.status !== 'conflict');
+        if (!activeGame) return res.status(400).json({ error: 'No hay partida activa para reportar' });
+
+        if (activeGame.status !== 'playing')
+            return res.status(400).json({ error: 'La partida no está en fase de juego' });
+
+        if (isP1) {
+            activeGame.p1Report = result;
+        } else {
+            activeGame.p2Report = result;
+        }
+
+        if (activeGame.p1Report && activeGame.p2Report) {
+            const p1Won = activeGame.p1Report === 'win';
+            const p2Won = activeGame.p2Report === 'win';
+
+            if (p1Won !== p2Won) {
+                activeGame.status = 'completed';
+                const gameWinnerId = p1Won ? match.player1.id : match.player2.id;
+                const gameLoserId = p1Won ? match.player2.id : match.player1.id;
+                activeGame.winnerId = gameWinnerId;
+                activeGame.loserId = gameLoserId;
+
+                match.score = match.score || { p1: 0, p2: 0 };
+                if (p1Won) match.score.p1 += 1;
+                else match.score.p2 += 1;
+
+                if (match.score.p1 === 2 || match.score.p2 === 2) {
+                    match.status = 'completed';
+                    match.winnerId = match.score.p1 === 2 ? match.player1.id : match.player2.id;
+                    match.loserId = match.score.p1 === 2 ? match.player2.id : match.player1.id;
+
+                    const winner = state.players.find(p => p.id === match.winnerId);
+                    const loser = state.players.find(p => p.id === match.loserId);
+                    if (winner) winner.wins += 1;
+                    if (loser) {
+                        loser.losses += 1;
+                        if (loser.losses >= MAX_LOSSES) loser.eliminated = true;
+                    }
+                } else {
+                    match.status = 'ready';
+                    match.games.push({
+                        gameNumber: activeGame.gameNumber + 1,
+                        status: 'banning',
+                        p1BannedEC: null,
+                        p2BannedEC: null,
+                        p1Report: null,
+                        p2Report: null,
+                        winnerId: null,
+                        loserId: null
+                    });
+                }
+            } else {
+                activeGame.status = 'conflict';
+                match.status = 'conflict';
+            }
+        } else {
+            match.status = 'waiting_opponent';
+        }
+
+        await saveTournamentState(state);
+        res.json({ success: true, match: await enrichMatch(match) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al reportar juego' });
     }
 });
 
