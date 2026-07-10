@@ -38,7 +38,7 @@ async function getPlayerBattleTeam(userId) {
     return battleTeamECs.map(ec => allAlive.find(p => p.ec === ec)).filter(Boolean);
 }
 
-function getLockedECsForGame(match, playerId, gameNumber) {
+function getLockedBansForGame(match, playerId, gameNumber) {
     if (gameNumber <= 1) return [];
     
     const prevGameNumber = gameNumber - 1;
@@ -48,9 +48,9 @@ function getLockedECsForGame(match, playerId, gameNumber) {
     if (prevGame.winnerId !== playerId) return [];
     
     if (playerId === match.player1.id) {
-        return prevGame.p2BannedEC ? [prevGame.p2BannedEC] : [];
-    } else {
         return prevGame.p1BannedEC ? [prevGame.p1BannedEC] : [];
+    } else {
+        return prevGame.p2BannedEC ? [prevGame.p2BannedEC] : [];
     }
 }
 
@@ -71,8 +71,8 @@ async function enrichMatch(match) {
     
     const activeGameNumber = activeGame ? activeGame.gameNumber : 1;
     
-    match.p1LockedECs = getLockedECsForGame(match, match.player1.id, activeGameNumber);
-    match.p2LockedECs = getLockedECsForGame(match, match.player2.id, activeGameNumber);
+    match.p1LockedBans = getLockedBansForGame(match, match.player1.id, activeGameNumber);
+    match.p2LockedBans = getLockedBansForGame(match, match.player2.id, activeGameNumber);
     
     return match;
 }
@@ -699,9 +699,9 @@ router.post('/ban', authMiddleware, async (req, res) => {
         const exists = opponentTeam.some(p => p.ec === bannedEC);
         if (!exists) return res.status(400).json({ error: 'El Pokémon no está en el equipo del rival' });
 
-        const opponentLocked = getLockedECsForGame(match, opponentId, activeGame.gameNumber);
-        if (opponentLocked.includes(bannedEC)) {
-            return res.status(400).json({ error: 'Ese Pokémon ya está bloqueado en esta ronda' });
+        const myLockedBans = getLockedBansForGame(match, userId, activeGame.gameNumber);
+        if (myLockedBans.includes(bannedEC)) {
+            return res.status(400).json({ error: 'No puedes volver a banear el mismo Pokémon si ganaste la ronda anterior' });
         }
 
         if (isP1) {

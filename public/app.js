@@ -2900,8 +2900,8 @@ function renderCurrentMatch(match) {
     const myTeam = isP1 ? (match.player1.battleTeam || []) : (match.player2.battleTeam || []);
     const opponentTeam = isP1 ? (match.player2.battleTeam || []) : (match.player1.battleTeam || []);
 
-    const myLockedECs = isP1 ? (match.p1LockedECs || []) : (match.p2LockedECs || []);
-    const opponentLockedECs = isP1 ? (match.p2LockedECs || []) : (match.p1LockedECs || []);
+    const myLockedBans = isP1 ? (match.p1LockedBans || []) : (match.p2LockedBans || []);
+    const opponentLockedBans = isP1 ? (match.p2LockedBans || []) : (match.p1LockedBans || []);
 
     let flowHtml = '';
 
@@ -2939,7 +2939,7 @@ function renderCurrentMatch(match) {
             `;
 
             opponentTeam.forEach(poke => {
-                const isLocked = opponentLockedECs.includes(poke.ec);
+                const isLocked = myLockedBans.includes(poke.ec);
                 const isSelected = selectedBanEC === poke.ec;
                 
                 let cardClass = 'ban-card';
@@ -3018,13 +3018,13 @@ function renderCurrentMatch(match) {
                 </div>
 
                 <div class="locked-round-info">
-                    <strong>🚫 Bloqueos de ronda acumulados:</strong>
-                    <div>Tú no puedes usar: ${myLockedECs.length > 0 ? myLockedECs.map(ec => {
-                        const p = myTeam.find(x => x.ec === ec);
+                    <strong>🚫 Restricciones de baneo acumuladas:</strong>
+                    <div>No puedes volver a banear a: ${myLockedBans.length > 0 ? myLockedBans.map(ec => {
+                        const p = opponentTeam.find(x => x.ec === ec);
                         return p ? escapeHtml(p.nickname) : 'Desconocido';
                     }).join(', ') : 'Ninguno'}</div>
-                    <div>El rival no puede usar: ${opponentLockedECs.length > 0 ? opponentLockedECs.map(ec => {
-                        const p = opponentTeam.find(x => x.ec === ec);
+                    <div>El rival no puede volver a banear a: ${opponentLockedBans.length > 0 ? opponentLockedBans.map(ec => {
+                        const p = myTeam.find(x => x.ec === ec);
                         return p ? escapeHtml(p.nickname) : 'Desconocido';
                     }).join(', ') : 'Ninguno'}</div>
                 </div>
