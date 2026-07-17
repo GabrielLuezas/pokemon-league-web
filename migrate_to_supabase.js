@@ -14,11 +14,7 @@ const source = new Pool({
 
 // ─── DESTINO: Supabase ────────────────────────────────────────
 const target = new Pool({
-    host: 'aws-1-eu-west-1.pooler.supabase.com',
-    port: 6543,
-    database: 'postgres',
-    user: 'postgres.qxcfcidomzhfpgmmtdwj',
-    password: 'PokemonEspectralLeague2265',
+    connectionString: 'postgresql://postgres.gtmuzqyqiylqnwsyznwf:HeLZxNIPQrGYkVnB@aws-0-eu-central-1.pooler.supabase.com:5432/postgres',
     ssl: { rejectUnauthorized: false }
 });
 

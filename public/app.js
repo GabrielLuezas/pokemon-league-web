@@ -46,14 +46,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderEvolutions();
     loadTournament();
 
-    // Auto-refresh every 15 seconds
+    // Auto-refresh every 60 seconds (only when tab is visible to reduce DB calls)
     setInterval(async () => {
+        if (document.hidden) return;
         if (!currentTrainer) {
             await loadTrainers();
         } else {
             await refreshCurrentTrainer();
         }
-    }, 15000);
+    }, 60000);
 });
 
 async function loadTrainers() {

@@ -1,22 +1,15 @@
 const { Pool } = require('pg');
 const fs = require('fs');
+const path = require('path');
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 
-// Supabase pooler requiere el punto en el usuario — debe ir en la connection string
-// Para evitar conflicto SSL: pasar ssl como objeto y NO incluir sslmode en la URL
-const TARGET = {
-    host: 'aws-1-eu-west-1.pooler.supabase.com',
-    port: 6543,
-    database: 'postgres',
-    user: 'postgres.qxcfcidomzhfpgmmtdwj',
-    password: 'PokemonEspectralLeague2265',
-    ssl: { rejectUnauthorized: false },
-    // Parámetro extra que fuerza el nombre de usuario con el punto
-    application_name: 'migration'
-};
+require('dotenv').config();
 
-const pool = new Pool(TARGET);
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres.gtmuzqyqiylqnwsyznwf:HeLZxNIPQrGYkVnB@aws-0-eu-central-1.pooler.supabase.com:5432/postgres',
+    ssl: { rejectUnauthorized: false }
+});
 
 async function run() {
     let client;
@@ -24,7 +17,8 @@ async function run() {
         client = await pool.connect();
         await client.query('SELECT current_user');
         console.log('✅ Conectado a Supabase');
-        const sql = fs.readFileSync('./supabase_schema.sql', 'utf8');
+        const sqlPath = path.join(__dirname, 'supabase_schema.sql');
+        const sql = fs.readFileSync(sqlPath, 'utf8');
         await client.query(sql);
         console.log('✅ Schema creado en Supabase correctamente');
     } catch (err) {
@@ -36,3 +30,4 @@ async function run() {
     }
 }
 run();
+

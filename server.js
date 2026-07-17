@@ -406,10 +406,12 @@ async function checkLiveStatus(platform, channel) {
 async function updateAllLiveStatuses() {
     try {
         console.log('[STREAM MONITOR] Updating live statuses...');
-        const result = await pool.query('SELECT id, stream_platform, stream_channel FROM users WHERE stream_platform IS NOT NULL AND stream_channel IS NOT NULL');
+        const result = await pool.query('SELECT id, stream_platform, stream_channel, is_live FROM users WHERE stream_platform IS NOT NULL AND stream_channel IS NOT NULL');
         for (const user of result.rows) {
             const isLive = await checkLiveStatus(user.stream_platform, user.stream_channel);
-            await pool.query('UPDATE users SET is_live = $1 WHERE id = $2', [isLive, user.id]);
+            if (user.is_live !== isLive) {
+                await pool.query('UPDATE users SET is_live = $1 WHERE id = $2', [isLive, user.id]);
+            }
         }
         console.log('[STREAM MONITOR] Live statuses updated.');
     } catch (err) {
@@ -426,13 +428,14 @@ async function start() {
             console.log(`🌐 Pokemon League Web Dashboard running at http://localhost:${PORT}`);
         });
         
-        // Start background stream monitor
-        setInterval(updateAllLiveStatuses, 3 * 60 * 1000);
+        // Start background stream monitor every 5 minutes
+        setInterval(updateAllLiveStatuses, 5 * 60 * 1000);
         setTimeout(updateAllLiveStatuses, 5000);
     } catch (err) {
         console.error('Failed to start:', err);
         process.exit(1);
     }
 }
+
 
 start();
