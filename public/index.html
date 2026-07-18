@@ -498,79 +498,50 @@
 
       <!-- TAB: Calendario -->
       <section class="league-tab-content" id="tab-calendar">
-        <div class="calendar-hero">
-          <div class="calendar-hero-content">
-            <div class="calendar-hero-header">
-              <span class="calendar-hero-badge">📅 Cronograma Oficial</span>
-              <h2 class="calendar-hero-title">Calendario de la Liga</h2>
-              <p class="calendar-hero-subtitle">
-                Periodo de Aventura y Leveo: <strong>Del Lunes 20 al Viernes 31</strong> | Días de Combates y Torneo: <strong>Sábado 1 y Domingo 2</strong>
-              </p>
+        <div class="sim-calendar-wrapper">
+          <!-- Title & Subtitle -->
+          <div class="sim-calendar-title-container">
+            <h1 class="sim-calendar-title">CALENDARIO DE EVENTOS</h1>
+            <p class="sim-calendar-subtitle">Julio / Agosto 2026 · Temporada Megalocke · Horas en hora España (CEST)</p>
+          </div>
+
+          <!-- Legend Bar -->
+          <div class="sim-legend-bar">
+            <div class="sim-legend-item">
+              <span class="sim-legend-dot dot-inicio"></span>
+              <span class="sim-legend-text">Inicio PvE</span>
             </div>
-            
-            <div class="calendar-view-selector">
-              <button class="calendar-view-btn active" id="cal-view-grid-btn" onclick="switchCalendarView('grid')">
-                🗓️ Vista Mes
-              </button>
-              <button class="calendar-view-btn" id="cal-view-timeline-btn" onclick="switchCalendarView('timeline')">
-                📋 Vista Agenda
-              </button>
+            <div class="sim-legend-item">
+              <span class="sim-legend-dot dot-pve"></span>
+              <span class="sim-legend-text">PvE / Aventura</span>
+            </div>
+            <div class="sim-legend-item">
+              <span class="sim-legend-dot dot-fin"></span>
+              <span class="sim-legend-text">Fin PvE</span>
+            </div>
+            <div class="sim-legend-item">
+              <span class="sim-legend-dot dot-combates"></span>
+              <span class="sim-legend-text">Días de Combate</span>
             </div>
           </div>
 
-          <!-- Summary Stats -->
-          <div class="calendar-stats-grid">
-            <div class="cal-stat-card stat-start">
-              <span class="cal-stat-icon">🚀</span>
-              <div class="cal-stat-info">
-                <span class="cal-stat-label">Inicio Megalocke</span>
-                <span class="cal-stat-value">Lunes 20</span>
-              </div>
+          <!-- Calendar Grid Box -->
+          <div class="sim-calendar-box">
+            <!-- Days Headers -->
+            <div class="sim-grid-header">
+              <div>LUN</div>
+              <div>MAR</div>
+              <div>MIÉ</div>
+              <div>JUE</div>
+              <div>VIE</div>
+              <div>SÁB</div>
+              <div>DOM</div>
             </div>
-            <div class="cal-stat-card stat-adventure">
-              <span class="cal-stat-icon">🗺️</span>
-              <div class="cal-stat-info">
-                <span class="cal-stat-label">Periodo Aventura</span>
-                <span class="cal-stat-value">12 Días (20 al 31)</span>
-              </div>
-            </div>
-            <div class="cal-stat-card stat-deadline">
-              <span class="cal-stat-icon">🏁</span>
-              <div class="cal-stat-info">
-                <span class="cal-stat-label">Cierre de Leveo</span>
-                <span class="cal-stat-value">Viernes 31</span>
-              </div>
-            </div>
-            <div class="cal-stat-card stat-battles">
-              <span class="cal-stat-icon">⚔️</span>
-              <div class="cal-stat-info">
-                <span class="cal-stat-label">Fase de Combates</span>
-                <span class="cal-stat-value">Sábado 1 y Domingo 2</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- GRID VIEW -->
-        <div class="calendar-grid-wrapper" id="calendar-grid-view">
-          <div class="calendar-week-headers">
-            <div class="cal-header-day">Lunes</div>
-            <div class="cal-header-day">Martes</div>
-            <div class="cal-header-day">Miércoles</div>
-            <div class="cal-header-day">Jueves</div>
-            <div class="cal-header-day">Viernes</div>
-            <div class="cal-header-day cal-weekend">Sábado</div>
-            <div class="cal-header-day cal-weekend">Domingo</div>
-          </div>
-          <div class="calendar-month-grid" id="calendar-grid-cards">
-            <!-- Rendered via JS -->
-          </div>
-        </div>
-
-        <!-- TIMELINE VIEW -->
-        <div class="calendar-timeline-wrapper" id="calendar-timeline-view" style="display: none;">
-          <div class="calendar-timeline-list" id="calendar-timeline-cards">
-            <!-- Rendered via JS -->
+            <!-- Month Days Grid -->
+            <div class="sim-grid-body" id="sim-calendar-grid">
+              <!-- Rendered via JS -->
+            </div>
           </div>
         </div>
       </section>

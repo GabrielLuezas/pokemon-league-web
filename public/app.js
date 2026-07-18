@@ -3752,100 +3752,76 @@ const calendarDaysData = [
 ];
 
 function renderCalendar() {
-    const gridContainer = document.getElementById('calendar-grid-cards');
-    const timelineContainer = document.getElementById('calendar-timeline-cards');
-    if (!gridContainer || !timelineContainer) return;
+    const gridContainer = document.getElementById('sim-calendar-grid');
+    if (!gridContainer) return;
 
-    // Render Grid
-    gridContainer.innerHTML = calendarDaysData.map(day => `
-        <div class="cal-day-card type-${day.type}" onclick="openCalendarDayModal(${day.id})">
-            <div class="cal-card-top">
-                <div>
-                    <div class="cal-day-number">${day.dayNum}</div>
-                    <div class="cal-day-name-sub">${day.dayLabel.split(' ')[0]}</div>
-                </div>
-                <div class="cal-day-icon">${day.icon}</div>
-            </div>
-            <span class="cal-day-badge ${day.badgeClass}">${day.badgeText}</span>
-            <div class="cal-card-body">
-                <div class="cal-day-title">${escapeHtml(day.title)}</div>
-                <div class="cal-day-desc">${escapeHtml(day.shortDesc)}</div>
-            </div>
-        </div>
-    `).join('');
+    // Month Grid Structure matching the reference image layout
+    const cells = [
+        // Row 1 (Mon-Sun)
+        { type: 'empty' },
+        { type: 'empty' },
+        { dayNum: 1 },
+        { dayNum: 2 },
+        { dayNum: 3 },
+        { dayNum: 4 },
+        { dayNum: 5 },
 
-    // Render Timeline
-    timelineContainer.innerHTML = calendarDaysData.map(day => `
-        <div class="cal-timeline-item" onclick="openCalendarDayModal(${day.id})">
-            <div class="cal-timeline-node">${day.icon}</div>
-            <div class="cal-timeline-content type-${day.type}">
-                <div class="cal-tl-left">
-                    <div class="cal-tl-date">${day.dayLabel} • ${day.monthLabel}</div>
-                    <div class="cal-tl-title">${escapeHtml(day.title)}</div>
-                    <div class="cal-tl-desc">${escapeHtml(day.shortDesc)}</div>
+        // Row 2
+        { dayNum: 6 },
+        { dayNum: 7 },
+        { dayNum: 8 },
+        { dayNum: 9 },
+        { dayNum: 10 },
+        { dayNum: 11 },
+        { dayNum: 12 },
+
+        // Row 3
+        { dayNum: 13 },
+        { dayNum: 14 },
+        { dayNum: 15 },
+        { dayNum: 16 },
+        { dayNum: 17 },
+        { dayNum: 18 },
+        { dayNum: 19 },
+
+        // Row 4
+        { dayNum: 20, eventText: 'Inicio PvE', tagClass: 'tag-inicio' },
+        { dayNum: 21, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 22, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 23, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 24, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 25, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 26, eventText: 'PvE', tagClass: 'tag-pve' },
+
+        // Row 5
+        { dayNum: 27, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 28, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 29, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 30, eventText: 'PvE', tagClass: 'tag-pve' },
+        { dayNum: 31, eventText: 'Fin PvE', tagClass: 'tag-fin' },
+        { dayNum: 1, eventText: 'Días de combate', tagClass: 'tag-combates' },
+        { dayNum: 2, eventText: 'Días de combate', tagClass: 'tag-combates' }
+    ];
+
+    gridContainer.innerHTML = cells.map(cell => {
+        if (cell.type === 'empty') {
+            return `<div class="sim-grid-cell empty-cell"></div>`;
+        }
+        if (cell.eventText) {
+            return `
+                <div class="sim-grid-cell has-event">
+                    <span class="sim-cell-num">${cell.dayNum}</span>
+                    <span class="sim-event-tag ${cell.tagClass}">${escapeHtml(cell.eventText)}</span>
                 </div>
-                <span class="cal-day-badge ${day.badgeClass}">${day.badgeText}</span>
+            `;
+        }
+        return `
+            <div class="sim-grid-cell">
+                <span class="sim-cell-num">${cell.dayNum}</span>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
-function switchCalendarView(view) {
-    const gridView = document.getElementById('calendar-grid-view');
-    const timelineView = document.getElementById('calendar-timeline-view');
-    const gridBtn = document.getElementById('cal-view-grid-btn');
-    const timelineBtn = document.getElementById('cal-view-timeline-btn');
-
-    if (view === 'grid') {
-        gridView.style.display = '';
-        timelineView.style.display = 'none';
-        gridBtn.classList.add('active');
-        timelineBtn.classList.remove('active');
-    } else {
-        gridView.style.display = 'none';
-        timelineView.style.display = '';
-        gridBtn.classList.remove('active');
-        timelineBtn.classList.add('active');
-    }
-}
-
-function openCalendarDayModal(dayId) {
-    const day = calendarDaysData.find(d => d.id === dayId);
-    if (!day) return;
-
-    const overlay = document.getElementById('modal-overlay');
-    const content = document.getElementById('modal-content');
-
-    content.innerHTML = `
-        <div class="calendar-day-modal">
-            <button class="modal-close" onclick="closeModal()">✕</button>
-            <div class="cal-modal-header">
-                <div class="cal-modal-icon">${day.icon}</div>
-                <div>
-                    <span class="cal-day-badge ${day.badgeClass}" style="margin-bottom:6px;">${day.badgeText}</span>
-                    <h2>${day.dayLabel} — ${escapeHtml(day.title)}</h2>
-                    <p class="cal-modal-subtitle">${escapeHtml(day.subtitle)}</p>
-                </div>
-            </div>
-            <div class="cal-modal-body">
-                <div class="cal-modal-section">
-                    <h3>📝 Resumen del Día</h3>
-                    <p>${escapeHtml(day.longDesc)}</p>
-                </div>
-                <div class="cal-modal-section">
-                    <h3>📜 Reglas y Especificaciones</h3>
-                    <ul class="cal-modal-rules-list">
-                        ${day.rules.map(r => `<li><span>🔹</span> <span>${escapeHtml(r)}</span></li>`).join('')}
-                    </ul>
-                </div>
-            </div>
-            <div class="cal-modal-footer">
-                <button class="auth-btn" onclick="closeModal()" style="padding:10px 24px;">Entendido</button>
-            </div>
-        </div>
-    `;
-
-    overlay.classList.add('visible');
-}
 
 
