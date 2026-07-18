@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPokemonList();
     renderEvolutions();
     loadTournament();
+    renderCalendar();
 
     // Auto-refresh every 60 seconds (only when tab is visible to reduce DB calls)
     setInterval(async () => {
@@ -3492,4 +3493,359 @@ async function adminResetTournament() {
         alert('Error de conexión');
     }
 }
+
+// ===================== CALENDAR SYSTEM =====================
+
+const calendarDaysData = [
+    {
+        id: 1,
+        dayNum: "20",
+        dayLabel: "Lunes 20",
+        monthLabel: "Inicio de Evento",
+        type: "start",
+        badgeText: "🚀 Inicio Megalocke",
+        badgeClass: "badge-start",
+        title: "Día 1: Inicio del Megalocke",
+        subtitle: "Apertura oficial del desafío en Alola",
+        icon: "🚀",
+        shortDesc: "Comienza la aventura. Capturas iniciales en Ruta 1 y Escuela de Entrenadores.",
+        longDesc: "¡Damos el pistoletazo de salida a la Espectral Pokémon League! Todos los entrenadores comienzan su aventura en Alola. Recuerda registrar tus capturas y sincronizar tu partida mediante la app de escritorio.",
+        rules: [
+            "Regla de mote obligatorio activa.",
+            "Capturas iniciales según reglamento (Ruta 1 y Escuela).",
+            "Sincronización activa con la plataforma web."
+        ]
+    },
+    {
+        id: 2,
+        dayNum: "21",
+        dayLabel: "Martes 21",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "🗺️ Aventura & Leveo",
+        badgeClass: "badge-adventure",
+        title: "Día 2: Progreso en Alola",
+        subtitle: "Primeras Pruebas y avance en la historia",
+        icon: "🗺️",
+        shortDesc: "Avance por las primeras zonas y enfrentamiento a los primeros desafíos.",
+        longDesc: "Continúa el avance por la isla. Es momento de ir formando el equipo base y superar las primeras Pruebas manteniendo el nivel dentro del límite permitido.",
+        rules: [
+            "Respetar límite de nivel de Pruebas y Kahunas.",
+            "Modo Mantener en combates obligatorio.",
+            "Prohibidos objetos curativos en combate."
+        ]
+    },
+    {
+        id: 3,
+        dayNum: "22",
+        dayLabel: "Miércoles 22",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "🌿 Aventura & Leveo",
+        badgeClass: "badge-adventure",
+        title: "Día 3: Avance de Historia",
+        subtitle: "Capturas estratégicas y balance de equipo",
+        icon: "🌿",
+        shortDesc: "Nuevas rutas desbloqueadas y gestión estratégica de cajas.",
+        longDesc: "Exploración de nuevas áreas para capturar Pokémon que cubran las debilidades del equipo. ¡Cuidado con los Pokémon salvajes y entrenadores en ruta!",
+        rules: [
+            "Muerte permanente activa en todo momento.",
+            "Gestión de puntos de retos y tienda de cartas."
+        ]
+    },
+    {
+        id: 4,
+        dayNum: "23",
+        dayLabel: "Jueves 23",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "⚡ Desafíos de Isla",
+        badgeClass: "badge-adventure",
+        title: "Día 4: Pruebas y Kahunas",
+        subtitle: "Desafíos a los Grandes de la Isla",
+        icon: "⚡",
+        shortDesc: "Combates clave contra los Kahunas de Alola.",
+        longDesc: "Supera los grandes combates de la isla. Revisa los niveles máximos en la sección de Información antes de entrar al combate.",
+        rules: [
+            "Comprobar nivel máximo de Kahuna antes de luchar.",
+            "Reportar evoluciones especiales si aplica."
+        ]
+    },
+    {
+        id: 5,
+        dayNum: "24",
+        dayLabel: "Viernes 24",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "🔥 Exploración",
+        badgeClass: "badge-adventure",
+        title: "Día 5: Consolidación de Equipo",
+        subtitle: "Consolidación de estrategia y cobertura de tipos",
+        icon: "🔥",
+        shortDesc: "Rutas avanzadas y afinación de movimientos.",
+        longDesc: "Llegamos al final de la primera semana laboral. Prepara tu equipo para el maratón del fin de semana.",
+        rules: [
+            "Revisión de bajas en el cementerio de la web.",
+            "Control de Caramelos Raros."
+        ]
+    },
+    {
+        id: 6,
+        dayNum: "25",
+        dayLabel: "Sábado 25",
+        monthLabel: "Fin de Semana",
+        type: "weekend",
+        badgeText: "🌟 Maratón Finde",
+        badgeClass: "badge-weekend",
+        title: "Día 6: Maratón de Fin de Semana (I)",
+        subtitle: "Jornada intensiva de progreso en la liga",
+        icon: "🌟",
+        shortDesc: "Aprovecha el fin de semana para avanzar ampliamente en la historia.",
+        longDesc: "Primer día del maratón de fin de semana. Oportunidad ideal para avanzar varios capítulos de la historia y desbloquear nuevas zonas de capturas.",
+        rules: [
+            "Sincronizar frecuentemente el progreso.",
+            "Revisar tabla de clasificaciones y muertes."
+        ]
+    },
+    {
+        id: 7,
+        dayNum: "26",
+        dayLabel: "Domingo 26",
+        monthLabel: "Fin de Semana",
+        type: "weekend",
+        badgeText: "🌟 Maratón Finde",
+        badgeClass: "badge-weekend",
+        title: "Día 7: Maratón de Fin de Semana (II)",
+        subtitle: "Cierre de la primera semana del Megalocke",
+        icon: "✨",
+        shortDesc: "Cierre de la 1ª semana. Optimización de cajas y evoluciones.",
+        longDesc: "Concluimos la primera semana. Revisa el estado de tus Pokémon, haz evolucionar a los que cumplan requisitos especiales y planifica la recta final.",
+        rules: [
+            "Evoluciones especiales consultables en la pestaña de Información."
+        ]
+    },
+    {
+        id: 8,
+        dayNum: "27",
+        dayLabel: "Lunes 27",
+        monthLabel: "Segunda Semana",
+        type: "adventure",
+        badgeText: "🔮 Recta Final",
+        badgeClass: "badge-adventure",
+        title: "Día 8: Segunda Semana de Aventura",
+        subtitle: "Comienza la recta final del periodo de leveo",
+        icon: "🔮",
+        shortDesc: "Entramos en la recta final de la aventura previa a los combates.",
+        longDesc: "Comienza la última semana para completar la aventura en Alola. Es hora de perfilar los candidatos principales para el Equipo de Combate.",
+        rules: [
+            "Planificación de equipo para la fase PvP."
+        ]
+    },
+    {
+        id: 9,
+        dayNum: "28",
+        dayLabel: "Martes 28",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "🏔️ Preparación Liga",
+        badgeClass: "badge-adventure",
+        title: "Día 9: Zonas Finales y Capturas",
+        subtitle: "Últimas rutas y desafíos de la historia",
+        icon: "🏔️",
+        shortDesc: "Acceso a las zonas finales y últimas capturas permitidas.",
+        longDesc: "Avanza hacia el clímax de la historia. Cada movimiento cuenta para evitar bajas catastróficas a pocos días de la competición.",
+        rules: [
+            "Mantener foco en la supervivencia de Pokémon clave."
+        ]
+    },
+    {
+        id: 10,
+        dayNum: "29",
+        dayLabel: "Miércoles 29",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "🛡️ Optimización",
+        badgeClass: "badge-adventure",
+        title: "Día 10: Perfeccionamiento de Movimientos",
+        subtitle: "Ajuste de MTs, objetos y estrategias",
+        icon: "🛡️",
+        shortDesc: "Ajuste fino de sinergias y movimientos en el equipo.",
+        longDesc: "Faltan solo 2 días para el cierre de leveo. Dedica tiempo a pulir los conjuntos de movimientos (movesets) y objetos equipables.",
+        rules: [
+            "Verificación de legalidad de objetos y movimientos."
+        ]
+    },
+    {
+        id: 11,
+        dayNum: "30",
+        dayLabel: "Jueves 30",
+        monthLabel: "Fase de Aventura",
+        type: "adventure",
+        badgeText: "🎯 Penúltimo Día",
+        badgeClass: "badge-adventure",
+        title: "Día 11: Penúltimo Día de Aventura",
+        subtitle: "Últimas horas para subir de nivel y completar rutas",
+        icon: "🎯",
+        shortDesc: "Últimos retoques antes del gran cierre de leveo.",
+        longDesc: "Penúltimo día para jugar la partida guardada y entrenar. Asegúrate de tener a todos tus Pokémon listos al nivel objetivo.",
+        rules: [
+            "Comprobar que no se sobrepase el límite de nivel."
+        ]
+    },
+    {
+        id: 12,
+        dayNum: "31",
+        dayLabel: "Viernes 31",
+        monthLabel: "Cierre Periodo Aventura",
+        type: "deadline",
+        badgeText: "🔴 FIN DE LEVEO",
+        badgeClass: "badge-deadline",
+        title: "Día 12: Fin del Periodo de Aventura",
+        subtitle: "¡Último día oficial para avanzar en el juego!",
+        icon: "🏁",
+        shortDesc: "Cierre absoluto de partida y leveo al finalizar el día.",
+        longDesc: "¡ATENCIÓN! Al finalizar el Viernes 31 se da por concluida la fase de aventura y leveo del Megalocke. A partir de este momento no se puede realizar ningún progreso más en la partida guardada y debe registrarse el Equipo de Combate oficial.",
+        rules: [
+            "Cierre de leveo y capturas a las 23:59h.",
+            "Sincronizar última versión de la partida guardada.",
+            "Seleccionar los 6 Pokémon del Equipo de Combate en la web."
+        ]
+    },
+    {
+        id: 13,
+        dayNum: "1",
+        dayLabel: "Sábado 1",
+        monthLabel: "Fase de Combates",
+        type: "battles",
+        badgeText: "⚔️ COMBATES DÍA 1",
+        badgeClass: "badge-battles",
+        title: "Día 13: Día 1 de Combates PvP",
+        subtitle: "Fase de Grupos y Rondas Eliminatorias",
+        icon: "⚔️",
+        shortDesc: "¡Empiezan los combates! Fase de grupos y rondas iniciales del Torneo.",
+        longDesc: "¡Llegó el día de la verdad! Los entrenadores se enfrentan cara a cara en combates PvP con los equipos preparados durante el Nuzlocke. Consulta tus emparejamientos en la pestaña 'Combates'.",
+        rules: [
+            "Combates según formato Swiss / Eliminatorias.",
+            "Reporte de resultados en directo en la sección de Combates.",
+            "Respetar las reglas de equipo seleccionadas en la web."
+        ]
+    },
+    {
+        id: 14,
+        dayNum: "2",
+        dayLabel: "Domingo 2",
+        monthLabel: "Fase Final y Torneo",
+        type: "final",
+        badgeText: "🏆 COMBATES DÍA 2 - GRAN FINAL",
+        badgeClass: "badge-final",
+        title: "Día 14: Día 2 de Combates y Gran Final",
+        subtitle: "Playoffs Finales, Semifinales y Gran Final",
+        icon: "🏆",
+        shortDesc: "Fase Final del Torneo y Coronación del Campeón.",
+        longDesc: "Última jornada del evento. Se disputan los combates decisivos de los Playoffs, las Semifinales y la Gran Final que determinará al Campeón de la Espectral Pokémon League. Repartición del Prize Pool al finalizar.",
+        rules: [
+            "Fase eliminatoria final en directo.",
+            "Coronación del Campeón y distribución del Prize Pool.",
+            "Ceremonia de clausura de la liga."
+        ]
+    }
+];
+
+function renderCalendar() {
+    const gridContainer = document.getElementById('calendar-grid-cards');
+    const timelineContainer = document.getElementById('calendar-timeline-cards');
+    if (!gridContainer || !timelineContainer) return;
+
+    // Render Grid
+    gridContainer.innerHTML = calendarDaysData.map(day => `
+        <div class="cal-day-card type-${day.type}" onclick="openCalendarDayModal(${day.id})">
+            <div class="cal-card-top">
+                <div>
+                    <div class="cal-day-number">${day.dayNum}</div>
+                    <div class="cal-day-name-sub">${day.dayLabel.split(' ')[0]}</div>
+                </div>
+                <div class="cal-day-icon">${day.icon}</div>
+            </div>
+            <span class="cal-day-badge ${day.badgeClass}">${day.badgeText}</span>
+            <div class="cal-card-body">
+                <div class="cal-day-title">${escapeHtml(day.title)}</div>
+                <div class="cal-day-desc">${escapeHtml(day.shortDesc)}</div>
+            </div>
+        </div>
+    `).join('');
+
+    // Render Timeline
+    timelineContainer.innerHTML = calendarDaysData.map(day => `
+        <div class="cal-timeline-item" onclick="openCalendarDayModal(${day.id})">
+            <div class="cal-timeline-node">${day.icon}</div>
+            <div class="cal-timeline-content type-${day.type}">
+                <div class="cal-tl-left">
+                    <div class="cal-tl-date">${day.dayLabel} • ${day.monthLabel}</div>
+                    <div class="cal-tl-title">${escapeHtml(day.title)}</div>
+                    <div class="cal-tl-desc">${escapeHtml(day.shortDesc)}</div>
+                </div>
+                <span class="cal-day-badge ${day.badgeClass}">${day.badgeText}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function switchCalendarView(view) {
+    const gridView = document.getElementById('calendar-grid-view');
+    const timelineView = document.getElementById('calendar-timeline-view');
+    const gridBtn = document.getElementById('cal-view-grid-btn');
+    const timelineBtn = document.getElementById('cal-view-timeline-btn');
+
+    if (view === 'grid') {
+        gridView.style.display = '';
+        timelineView.style.display = 'none';
+        gridBtn.classList.add('active');
+        timelineBtn.classList.remove('active');
+    } else {
+        gridView.style.display = 'none';
+        timelineView.style.display = '';
+        gridBtn.classList.remove('active');
+        timelineBtn.classList.add('active');
+    }
+}
+
+function openCalendarDayModal(dayId) {
+    const day = calendarDaysData.find(d => d.id === dayId);
+    if (!day) return;
+
+    const overlay = document.getElementById('modal-overlay');
+    const content = document.getElementById('modal-content');
+
+    content.innerHTML = `
+        <div class="calendar-day-modal">
+            <button class="modal-close" onclick="closeModal()">✕</button>
+            <div class="cal-modal-header">
+                <div class="cal-modal-icon">${day.icon}</div>
+                <div>
+                    <span class="cal-day-badge ${day.badgeClass}" style="margin-bottom:6px;">${day.badgeText}</span>
+                    <h2>${day.dayLabel} — ${escapeHtml(day.title)}</h2>
+                    <p class="cal-modal-subtitle">${escapeHtml(day.subtitle)}</p>
+                </div>
+            </div>
+            <div class="cal-modal-body">
+                <div class="cal-modal-section">
+                    <h3>📝 Resumen del Día</h3>
+                    <p>${escapeHtml(day.longDesc)}</p>
+                </div>
+                <div class="cal-modal-section">
+                    <h3>📜 Reglas y Especificaciones</h3>
+                    <ul class="cal-modal-rules-list">
+                        ${day.rules.map(r => `<li><span>🔹</span> <span>${escapeHtml(r)}</span></li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            <div class="cal-modal-footer">
+                <button class="auth-btn" onclick="closeModal()" style="padding:10px 24px;">Entendido</button>
+            </div>
+        </div>
+    `;
+
+    overlay.classList.add('visible');
+}
+
 
